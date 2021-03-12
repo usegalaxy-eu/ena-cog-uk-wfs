@@ -1,0 +1,12 @@
+ARTIC primer BED:
+  class: File
+  galaxy_id: ...
+ARTIC primers to amplicon assignments:
+  class: File
+  galaxy_id: ...
+FASTA sequence of SARS-CoV-2:
+  class: File
+  galaxy_id: ...
+Paired Collection (fastqsanger):
+  class: Collection
+  galaxy_id: todo_galaxy_id
