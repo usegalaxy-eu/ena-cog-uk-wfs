@@ -17,8 +17,11 @@ history_id = histories_with_name[0]['id']
 
 while True:
     history = gi.histories.show_history(history_id, contents=True)
-    ok_datasets = [ds for ds in history if ds['ok']]
-    if len(ok_datasets) / len(history) > PROPORTION_OK_REQUIRED:
+    datasets = [ds for ds in history if ds.get('state')]
+    ok_datasets = [ds for ds in history if ds.get('state') == 'ok']
+    proportion_ok = len(ok_datasets) / len(datasets)
+    sys.stdout.write(f'Proportion ok: {proportion_ok}\n')
+    if proportion_ok > PROPORTION_OK_REQUIRED:
         exit(0)
     time.sleep(WAIT_TIME)
 
