@@ -6,7 +6,7 @@ from find_histories import find_histories_by_tags
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('dataset_name', help='Name of the dataset(s) to report')
+parser.add_argument('dataset_name', help='Regex to match name of the dataset(s) to report', default='.*')
 parser.add_argument(
     '-g', '--galaxy-url', required=True,
     help='URL of the Galaxy instance to run query against'
@@ -36,7 +36,7 @@ gi = galaxy.GalaxyInstance(
     key=args.api_key
 )
 
-hids = find_histories_by_tags(gi, args.history_tags)
+history_ids = find_histories_by_tags(gi, args.history_tags)
 
 if args.ofile:
     out = open(args.ofile, 'w')
@@ -44,11 +44,11 @@ else:
     out = sys.stdout
 
 try:
-    for hid in hids:
-        datasets = gi.histories.show_matching_datasets(hid, args.dataset_name)
+    for history_id in history_ids:
+        datasets = gi.histories.show_matching_datasets(history_id, args.dataset_name)
         if datasets:
-            assert len(datasets) == 1
-            history_name = gi.histories.get_histories(history_id=hid)[0]['name']
+            assert len(datasets) == 1, "Multiple datasets found!"
+            history_name = gi.histories.get_histories(history_id=history_id)[0]['name']
             dataset_download_url = '/'.join(
                 [args.galaxy_url, datasets[0]['download_url']]
             )
@@ -61,7 +61,7 @@ try:
             sys.exit(
                 'History "{0}" does not contain dataset named "{1}" '
                 'and strict mode is enabled.'
-                .format(hid, args.dataset_name)
+                .format(history_id, args.dataset_name)
             )
 finally:
     if out is not sys.stdout:
