@@ -1,0 +1,13 @@
+#from_history_name: {histories[0][name]}
+#from_history_id: {histories[0][id]}
+
+AF Filter: 0.05
+DP Filter: 1
+DP_ALT Filter: 10
+Number of Clusters: 12
+Variation data to report:
+  class: Collection
+  galaxy_id: "{datasets[0][id]}"
+gene products translations:
+  class: File
+  galaxy_id: "11ac94870d0bb33a3c4a9e39200f96ad"
