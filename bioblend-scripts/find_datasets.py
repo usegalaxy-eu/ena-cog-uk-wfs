@@ -144,10 +144,11 @@ if __name__ == '__main__':
                     gi.histories.get_histories(history_id=history_id)
                 )
                 flat_datasets.extend(datasets)
-            out.write(template.format(
-                histories=flat_histories,
-                datasets=flat_datasets)
-            )
+            if flat_histories:
+                out.write(template.format(
+                    histories=flat_histories,
+                    datasets=flat_datasets)
+                )
         else:
             out.write('\t'.join([
                 'history_id',
