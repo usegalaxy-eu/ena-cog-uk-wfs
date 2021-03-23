@@ -9,5 +9,7 @@ Variation data to report:
   class: Collection
   galaxy_id: "{datasets[0][id]}"
 gene products translations:
+  # This dataset is part of the published history
+  # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
   class: File
   galaxy_id: "11ac94870d0bb33a3c4a9e39200f96ad"
