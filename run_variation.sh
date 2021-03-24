@@ -1,0 +1,9 @@
+# check previous invocation
+
+planemo list_invocations ...
+
+python ...  # check history
+
+if ...
+  planemo run ...
+fi
