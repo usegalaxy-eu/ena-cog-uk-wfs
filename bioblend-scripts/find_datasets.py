@@ -1,7 +1,7 @@
 import sys
 
 from bioblend import galaxy
-from find_histories import find_histories_by_tags
+from find_by_tags import find_histories_by_tags
 
 
 def show_matching_dataset_info(
