@@ -15,13 +15,15 @@ from bioblend import galaxy
 # assert len(histories_with_name) < 2
 # history_id = histories_with_name[0]['id']
 
-def check_history(gi, history_id, proportion_ok_required):
+TERMINAL_STATES = {'ok', 'empty', 'error', 'discarded', 'failed_metadata', 'paused'}
+
+def check_history(gi, history_id, proportion_terminal_required):
     history = gi.histories.show_history(history_id, contents=True)
     datasets = [ds for ds in history if ds.get('state')]
-    ok_datasets = [ds for ds in history if ds.get('state') == 'ok']
-    proportion_ok = len(ok_datasets) / len(datasets)
-    sys.stdout.write(f'Proportion ok: {proportion_ok}\n')
-    if proportion_ok > proportion_ok_required:
+    terminal_datasets = [ds for ds in history if ds.get('state') in TERMINAL_STATES]
+    proportion_terminal = len(terminal_datasets) / len(datasets)
+    sys.stdout.write(f'Proportion terminal: {proportion_terminal}\n')
+    if proportion_terminal > proportion_terminal_required:
         sys.stdout.write('Previous history complete!\n')
         exit(0)
     else:
@@ -45,10 +47,10 @@ if __name__ == '__main__':
         help='API key to use for authenticating on the Galaxy server'
     )
     parser.add_argument(
-        '-p', '--proportion_ok', required=True, type=float,
-        help='Proportion of jobs which need to be ok for the history to be deemed complete.'
+        '-p', '--proportion_terminal', required=True, type=float,
+        help='Proportion of jobs which need to be terminal for the history to be deemed complete.'
     )
     args = parser.parse_args()
 
     gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
-    check_history(gi, args.history_id, args.proportion_ok) 
+    check_history(gi, args.history_id, args.proportion_terminal) 
