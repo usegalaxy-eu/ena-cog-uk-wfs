@@ -45,7 +45,7 @@ def get_matching_datasets_from_histories(
                 'provided names in "{1}".'
                 .format(history_id, dataset_names)
             )
-        yield history_id, [d[0] for d in datasets]
+        yield [d[0] for d in datasets]
         if max_matching is not None:
             yield_count += 1
             if yield_count >= max_matching:
@@ -112,7 +112,10 @@ if __name__ == '__main__':
         key=args.api_key
     )
 
-    history_ids = find_histories_by_tags(gi, args.history_tags)
+    history_ids = find_histories_by_tags(
+        args.history_tags,
+        gi.histories.get_histories()
+    )
     if args.datasets_only:
         dataset_types = ['dataset']
     elif args.collections_only:
@@ -139,9 +142,11 @@ if __name__ == '__main__':
             template = sys.stdin.read()
             flat_histories = []
             flat_datasets = []
-            for history_id, datasets in datasets_matcher:
+            for datasets in datasets_matcher:
                 flat_histories.extend(
-                    gi.histories.get_histories(history_id=history_id)
+                    gi.histories.get_histories(
+                        history_id=datasets[0]['history_id']
+                    )
                 )
                 flat_datasets.extend(datasets)
             if flat_histories:
@@ -160,7 +165,8 @@ if __name__ == '__main__':
                 'dataset_state'
             ]) + '\n')
 
-            for history_id, datasets in datasets_matcher:
+            for datasets in datasets_matcher:
+                history_id = datasets[0]['history_id']
                 history_name = gi.histories.get_histories(
                     history_id=history_id
                 )[0]['name']
