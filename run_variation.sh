@@ -16,7 +16,7 @@ mkdir $WORKDIR &&
 
 # check progress of previous invocation
 PREVIOUS_HISTORY=`python bioblend-scripts/get_most_recent_history_by_tag.py -g https://usegalaxy.eu -a $API_KEY --tag $DEST_TAG`
-python bioblend-scripts/check_history.py -g https://usegalaxy.eu -a $API_KEY -p 0.67 --history_id ${PREVIOUS_HISTORY} &&
+python bioblend-scripts/check_history.py -g https://usegalaxy.eu -a $API_KEY -p 0.67 --dataset-marker 'Final (SnpEff-) annotated variants' $PREVIOUS_HISTORY &&
 # start building the job.yml needed by planemo run
 cat "$JOB_YML_DIR/$JOB_YML" | python bioblend-scripts/find_collection_elements.py "FTP links by library" -g "https://usegalaxy.eu" -a $API_KEY -t cog-uk_ena-meta -n 1 --from-template -o "$WORKDIR/$JOB_YML"
 
