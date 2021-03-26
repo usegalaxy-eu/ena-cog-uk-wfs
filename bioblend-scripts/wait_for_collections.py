@@ -1,3 +1,7 @@
+"""
+deprecated
+"""
+
 import time
 
 from bioblend import galaxy
