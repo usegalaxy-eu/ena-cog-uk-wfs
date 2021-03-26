@@ -38,7 +38,7 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     # run the WF
     planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "COG-UK $DEST_NAME_SUFFIX" --tags $DEST_TAG --galaxy_url 'https://usegalaxy.eu' --galaxy_user_key $API_KEY --engine external_galaxy 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt" &&
     # on successful completion of the WF invocation inform downstream bots
-    sleep 120 &&
+    DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) &&
     python bioblend-scripts/tag_history.py $DEST_HISTORY_ID -g "https://usegalaxy.eu" -a $API_KEY -t $DEST_BOT_TAGs
 fi
 
