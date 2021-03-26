@@ -7,6 +7,3 @@ ARTIC primers to amplicon assignments:
 FASTA sequence of SARS-CoV-2:
   class: File
   galaxy_id: ...
-Paired Collection (fastqsanger):
-  class: Collection
-  galaxy_id: todo_galaxy_id

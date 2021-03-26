@@ -82,11 +82,11 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'dataset_id',
+        '--dataset_id',
         help='Dataset id for download containing the FTP links'
     )
     parser.add_argument(
-        'collection_name',
+        '--collection_name',
         help='The yml key to use for the collection element'
     )
     parser.add_argument(
