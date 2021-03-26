@@ -19,14 +19,14 @@ def get_matching_slices_from_collections(gi, tags, collections, max_matching):
             )
         ret = slice_collections_by_elements_tags(tags, [collection])
         if ret['elements']:
-            if yield_count + len(ret['elements']) > max_matching:
+            if (max_matching is not None) and (
+                yield_count + len(ret['elements']) > max_matching
+            ):
                 ret['elements'] = ret['elements'][:max_matching-yield_count]
-            yield_count += len(ret)
+                yield ret
+                break
+            yield_count += len(ret['elements'])
             yield ret
-            if max_matching is not None:
-                yield_count += 1
-                if yield_count >= max_matching:
-                    break
 
 
 if __name__ == '__main__':
