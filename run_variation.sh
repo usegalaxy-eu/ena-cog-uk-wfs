@@ -4,8 +4,8 @@ BOT_RESPONSE='bot-processed'
 DEST_TAG='cog-uk_variation'
 DEST_BOT_TAGs='bot-go-report bot-go-consensus bot-go-beaconize'
 JOB_YML='variation-job.yml'
-DOWNLOADED_DATA_COLLECTION='Paired Collection (fastqsanger)'
-WF_ID='b9358bbbe4cec7fe'
+DOWNLOADED_DATA_COLLECTION='Paired Collection'
+WF_ID='48509fef29ad8166'
 
 # common for all bots
 JOB_YML_DIR='job-yml-templates'

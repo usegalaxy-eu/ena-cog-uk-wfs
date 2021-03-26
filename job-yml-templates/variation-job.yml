@@ -13,7 +13,7 @@ ARTIC primers to amplicon assignments:
   # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
   class: File
   galaxy_id: "11ac94870d0bb33a27803f2f94a23aab"
-FASTA sequence of SARS-CoV-2:
+NC_045512.2 FASTA sequence of SARS-CoV-2:
   # This dataset is part of the published history
   # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
   class: File
