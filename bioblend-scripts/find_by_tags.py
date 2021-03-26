@@ -4,27 +4,36 @@ def filter_objects_by_tags(tags, objects):
     else:
         search_tags = set(tags)
 
-    ret = []
     for obj in objects:
         object_tags = set(obj['tags']) or set([None])
         if search_tags.issubset(object_tags):
-            ret.append(obj)
+            yield obj
 
+
+def _enumerate_collection_datasets(elements):
+    for element in elements:
+        ret = {'element_index': element['element_index']}
+        ret.update(element['object'])
+        yield ret
+
+
+def slice_collections_by_elements_tags(tags, collections):
+    sliced_elements = []
+    for collection in collections:
+        retain_indices = [
+            matched_dataset['element_index']
+            for matched_dataset in filter_objects_by_tags(
+                tags,
+                _enumerate_collection_datasets(collection['elements'])
+            )
+        ]
+        ret = collection.copy()
+        ret['elements'] = [collection['elements'][i] for i in retain_indices]
     return ret
 
 
-def find_histories_by_tags(gi, tags, histories=None):
-    histories = gi.histories.get_histories()
-
+def find_histories_by_tags(tags, histories):
     ret = [
         history['id'] for history in filter_objects_by_tags(tags, histories)
-    ]
-    return ret
-
-
-def find_collection_elements_by_tags(gi, tags, collections):
-    ret = [
-        (collection['history_id'], collection['id'])
-        for collection in filter_objects_by_tags(tags, collections)
     ]
     return ret
