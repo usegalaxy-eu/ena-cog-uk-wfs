@@ -1,3 +1,6 @@
+#use_server: https://usegalaxy.eu
+#use_workflow_id: 48509fef29ad8166
+
 #from_history_name: {histories[0][name]}
 #from_history_id: {histories[0][id]}
 #from_ena_links_in: {collections[0][elements][0][object][id]}
