@@ -1,2 +1,2 @@
 bioblend
-planemo
+git+https://github.com/simonbray/planemo.git@cog-uk#egg=planemo
