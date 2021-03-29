@@ -1,7 +1,7 @@
 # bot-specific settings
 BOT_SIGNAL1='bot-scheduling'
 BOT_SIGNAL2='bot-processing'
-BOT_SIGNAL3='bot_processed'
+BOT_SIGNAL3='bot-processed'
 DEST_TAG='cog-uk_variation'
 DEST_BOT_TAGs='bot-go-report bot-go-consensus bot-go-beaconize'
 JOB_YML='variation-job.yml'

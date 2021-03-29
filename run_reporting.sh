@@ -1,6 +1,8 @@
 # bot-specific settings
 BOT_TAG='bot-go-report'
-BOT_RESPONSE='report-bot-ok'
+BOT_STATUS1='report-bot-scheduling'
+BOT_STATUS2='report-bot-processing'
+BOT_STATUS3='report-bot-ok'
 DEST_TAG='cog-uk_report'
 DEST_NAME_SUFFIX='Reporting'
 VCF_DATA='Final (SnpEff-) annotated variants'
@@ -23,12 +25,16 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     # otherwise we assume no history is ready for processing
     SOURCE_HISTORY_ID=$(grep '#from_history_id:' "$WORKDIR/$JOB_YML" | cut -d ' ' -f 2-)
     SOURCE_HISTORY_NAME=$(grep '#from_history_name:' "$WORKDIR/$JOB_YML" | cut -d ' ' -f 2-)
+    # wait for successful completion of workflow scheduling by planemo run,
+    # then tag the new history and update the status tag of the source history
+    (while [ ! -s "$WORKDIR/run_info.txt" ]; do sleep 60; done; DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) && python bioblend-scripts/tag_history.py $DEST_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $DEST_TAG && python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_STATUS2 -r $BOT_STATUS1) &
     # prevent reprocessing of the same history by removing its bot-specific tag
-    python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -r $BOT_TAG
-    # wait for successful completion of workflow scheduling by planemo run, then tag the new history and retag the source history
-    (while [ ! -s "$WORKDIR/run_info.txt" ]; do sleep 60; done; DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) && python bioblend-scripts/tag_history.py $DEST_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $DEST_TAG && python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_RESPONSE) &
-    # run the viral beacon WF
-    planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "$SOURCE_HISTORY_NAME - $DEST_NAME_SUFFIX" --galaxy_url "$GALAXY_SERVER" --galaxy_user_key $API_KEY --engine external_galaxy 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt"
+    # replace it with a status tag instead
+    python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_STATUS1 -r $BOT_TAG
+    # run the reporting WF
+    planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "$SOURCE_HISTORY_NAME - $DEST_NAME_SUFFIX" --galaxy_url "$GALAXY_SERVER" --galaxy_user_key $API_KEY --engine external_galaxy 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt" &&
+    # final status tag update of the source history
+    python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_STATUS3 -r $BOT_STATUS2 $BOT_STATUS1
 fi
 
 rm -R $WORKDIR
