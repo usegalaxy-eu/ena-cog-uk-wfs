@@ -10,4 +10,7 @@ Annotated list of variants:
 Fully processed aligned reads:
   class: Collection
   galaxy_id: "{datasets[0][id]}"
+Consensus FASTA sequences:
+  class: Collection
+  galaxy_id: "{datasets[2][id]}"
 

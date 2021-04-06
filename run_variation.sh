@@ -3,7 +3,7 @@ BOT_SIGNAL1='bot-scheduling'
 BOT_SIGNAL2='bot-processing'
 BOT_SIGNAL3='bot-processed'
 DEST_TAG='cog-uk_variation'
-DEST_BOT_TAGs='bot-go-report bot-go-consensus bot-go-beaconize'
+DEST_BOT_TAGS='bot-go-report bot-go-consensus'
 JOB_YML='variation-job.yml'
 DOWNLOADED_DATA_COLLECTION='Paired Collection'
 
@@ -45,7 +45,7 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     # on successful completion of the WF invocation inform downstream bots
     # by tagging the new history accordingly
     DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) &&
-    python bioblend-scripts/tag_history.py $DEST_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $DEST_BOT_TAGs &&
+    python bioblend-scripts/tag_history.py $DEST_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $DEST_BOT_TAGS &&
     # mark the source history ENA links dataset as processed
     python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL3 -r $BOT_SIGNAL1 $BOT_SIGNAL2
 fi

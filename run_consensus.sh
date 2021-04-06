@@ -5,6 +5,7 @@ BOT_STATUS2='consensus-bot-processing'
 BOT_STATUS3='consensus-bot-ok'
 DEST_TAG='cog-uk_consensus'
 DEST_NAME_SUFFIX='Consensus'
+DEST_BOT_TAG='bot-go-export'
 BAM_DATA='Fully processed reads for variant calling (primer-trimmed, realigned reads with added indelquals)'
 VCF_DATA='Final (SnpEff-) annotated variants'
 JOB_YML='consensus-job.yml'
@@ -34,6 +35,10 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_STATUS1 -r $BOT_TAG
     # run the consensus WF
     planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "$SOURCE_HISTORY_NAME - $DEST_NAME_SUFFIX" --galaxy_url "$GALAXY_SERVER" --galaxy_user_key $API_KEY --engine external_galaxy 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt" &&
+    # on successful completion of the WF invocation inform downstream bots
+    # by tagging the new history accordingly
+    DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) &&
+    python bioblend-scripts/tag_history.py $DEST_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $DEST_BOT_TAG &&
     # final status tag update of the source history
     python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_STATUS3 -r $BOT_STATUS2 $BOT_STATUS1
 fi

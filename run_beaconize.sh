@@ -1,12 +1,13 @@
 # bot-specific settings
-BOT_TAG='bot-go-beaconize'
-BOT_STATUS1='beacon-bot-scheduling'
-BOT_STATUS2='beacon-bot-processing'
-BOT_STATUS3='beacon-bot-ok'
-DEST_TAG='beacon-export'
+BOT_TAG='bot-go-export'
+BOT_STATUS1='export-bot-scheduling'
+BOT_STATUS2='export-bot-processing'
+BOT_STATUS3='export-bot-ok'
+DEST_TAG='data-export'
 DEST_NAME_SUFFIX='Viral Beacon export'
 BAM_DATA='Fully processed reads for variant calling (primer-trimmed, realigned reads with added indelquals)'
 VCF_DATA='Final (SnpEff-) annotated variants'
+FASTA_DATA='Consensus sequence with masking'
 JOB_YML='beacon_export-job.yml'
 
 # common for all bots
@@ -19,7 +20,7 @@ WORKDIR=$BOT_TAG'_run_'$(date '+%s')
 mkdir $WORKDIR &&
 
 # generate the job.yml needed by planemo run from its template
-cat "$JOB_YML_DIR/$JOB_YML" | python bioblend-scripts/find_datasets.py "$BAM_DATA" "$VCF_DATA" -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_TAG --collections-only -n 1 --from-template -o "$WORKDIR/$JOB_YML"
+cat "$JOB_YML_DIR/$JOB_YML" | python bioblend-scripts/find_datasets.py "$BAM_DATA" "$VCF_DATA" "$FASTA_DATA" -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_TAG --collections-only -n 1 --from-template -o "$WORKDIR/$JOB_YML"
 
 if [ -s "$WORKDIR/$JOB_YML" ]; then
     # if the formatted job.yml file contains data, we know a suitable source history was found
