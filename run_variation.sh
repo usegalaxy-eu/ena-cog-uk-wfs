@@ -41,7 +41,7 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     # this will be changed to a processed tag by the background job launched above
     python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL1 &&
     # run the WF
-    planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "COG-UK $DEST_NAME_SUFFIX" --galaxy_url "$GALAXY_SERVER" --galaxy_user_key $API_KEY --engine external_galaxy 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt" &&
+    planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "COG-UK $DEST_NAME_SUFFIX" --galaxy_url "$GALAXY_SERVER" --galaxy_user_key $API_KEY --engine external_galaxy --no_simultaneous_uploads 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt" &&
     # on successful completion of the WF invocation inform downstream bots
     # by tagging the new history accordingly
     DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) &&
