@@ -8,7 +8,7 @@ DEST_NAME_SUFFIX='Viral Beacon export'
 BAM_DATA='Fully processed reads for variant calling (primer-trimmed, realigned reads with added indelquals)'
 VCF_DATA='Final (SnpEff-) annotated variants'
 FASTA_DATA='Consensus sequence with masking'
-JOB_YML='beacon_export-job.yml'
+JOB_YML='export-job.yml'
 
 # common for all bots
 JOB_YML_DIR='job-yml-templates'
