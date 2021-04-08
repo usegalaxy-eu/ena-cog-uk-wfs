@@ -2,6 +2,7 @@
 Takes a list of ftp links and converts to a yaml file ready for upload with planemo run
 """
 import argparse
+import time
 import yaml
 
 from bioblend import galaxy
@@ -10,9 +11,10 @@ TERMINAL_STATES = {
     'ok', 'empty', 'error', 'discarded', 'failed_metadata', 'paused'
 }
 
-def upload_dataset(gi, link, upload_attempts):
+def upload_dataset(gi, link, history_id, upload_attempts):
     while upload_attempts > 0:
-        dataset_id = gi.tools.put_url(content=link, history_id='d0edc84d344a1239')[outputs][0]['id']
+        dataset_id = gi.tools.put_url(content=link, history_id=history_id)['outputs'][0]['id']
+        print(dataset_id)
         for _ in range(100):
             state = gi.datasets.show_dataset(dataset_id)['state']
             if state not in TERMINAL_STATES:
@@ -26,7 +28,7 @@ def upload_dataset(gi, link, upload_attempts):
         upload_attempts -= 1
 
 
-def parse_ena_fastq_ftp_links(ena_links, gi, upload_attempts=100):
+def parse_ena_fastq_ftp_links(ena_links, gi, history_id, upload_attempts=100):
     records = {}
     pe_indicator_mapping = {'1': 'forward', '2': 'reverse'}
     is_pe_data = None
@@ -34,7 +36,7 @@ def parse_ena_fastq_ftp_links(ena_links, gi, upload_attempts=100):
         path, file = link.rsplit('/', maxsplit=1)
         ena_id, file_suffix = file.split('.', maxsplit=1)
         link = 'ftp://' + link
-        dataset_id = upload_dataset(gi, link, upload_attempts)
+        dataset_id = upload_dataset(gi, link, history_id, upload_attempts)
         if is_pe_data is None:
             # Use the first link to decide wether we are dealing with
             # SE or PE data links.
@@ -121,6 +123,15 @@ if __name__ == '__main__':
         '-o', '--output',
         help='Write output to this file instead of to standard output'
     )
+    parser.add_argument(
+        '-i', '--history_id',
+        help='History ID for uploading datasets'
+    )
+    parser.add_argument(
+        '-u', '--upload_attempts',
+        help='Number of retry attempts for dataset upload failures',
+        type=int
+    )
     args = parser.parse_args()
 
     gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
@@ -129,7 +140,7 @@ if __name__ == '__main__':
         args.dataset_id
     ).decode("utf-8").splitlines()[1:]
     yaml = records_to_yaml(
-        parse_ena_fastq_ftp_links(ena_links, gi),
+        parse_ena_fastq_ftp_links(ena_links, gi, args.history_id, args.upload_attempts),
         args.collection_name
     )
     if args.output:
