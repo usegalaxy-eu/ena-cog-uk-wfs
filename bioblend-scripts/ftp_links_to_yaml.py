@@ -7,36 +7,56 @@ import yaml
 
 from bioblend import galaxy
 
-TERMINAL_STATES = {
-    'ok', 'empty', 'error', 'discarded', 'failed_metadata', 'paused'
+NON_OK_TERMINAL_STATES = {
+    'empty', 'error', 'discarded', 'failed_metadata', 'paused'
 }
 
-def upload_dataset(gi, link, history_id, upload_attempts):
+def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
+    ena_links_dataset_ids = {}
+    ena_links_states = {link: 'empty' for link in ena_links}
     while upload_attempts > 0:
-        dataset_id = gi.tools.put_url(content=link, history_id=history_id)['outputs'][0]['id']
-        print(dataset_id)
-        for _ in range(100):
-            state = gi.datasets.show_dataset(dataset_id)['state']
-            if state not in TERMINAL_STATES:
-                time.sleep(10)
-                continue
-            else:
-                if state == 'ok':
-                    return dataset_id
-                else:
-                    break
+        for link in ena_links:
+            if ena_links_states[link] in NON_OK_TERMINAL_STATES:
+                ena_links_dataset_ids[link] = gi.tools.put_url(content=f"ftp://{link}", history_id=history_id)['outputs'][0]['id']
+
+        time.sleep(60)
+
+        for link in ena_links:
+            if ena_links_states[link] != 'ok':
+                ena_links_states[link] = gi.datasets.show_dataset(ena_links_dataset_ids[link])['state']
+        if set(ena_links_states.values()) == {'ok'}:
+            return ena_links_dataset_ids
+
         upload_attempts -= 1
 
+    raise Exception("Some datasets did not upload successfully after the specified number of upload attempts")
 
-def parse_ena_fastq_ftp_links(ena_links, gi, history_id, upload_attempts=100):
+
+# def upload_dataset(gi, link, history_id, upload_attempts):
+#     while upload_attempts > 0:
+#         dataset_id = gi.tools.put_url(content=link, history_id=history_id)['outputs'][0]['id']
+#         print(dataset_id)
+#         for _ in range(100):
+#             state = gi.datasets.show_dataset(dataset_id)['state']
+#             if state not in TERMINAL_STATES:
+#                 time.sleep(10)
+#                 continue
+#             else:
+#                 if state == 'ok':
+#                     return dataset_id
+#                 else:
+#                     break
+#         upload_attempts -= 1
+
+
+def parse_ena_fastq_ftp_links(ena_links):
     records = {}
     pe_indicator_mapping = {'1': 'forward', '2': 'reverse'}
     is_pe_data = None
-    for link in ena_links:
+    for link, dataset_id in ena_links.items():
         path, file = link.rsplit('/', maxsplit=1)
         ena_id, file_suffix = file.split('.', maxsplit=1)
         link = 'ftp://' + link
-        dataset_id = upload_dataset(gi, link, history_id, upload_attempts)
         if is_pe_data is None:
             # Use the first link to decide wether we are dealing with
             # SE or PE data links.
@@ -139,8 +159,11 @@ if __name__ == '__main__':
     ena_links = gi.datasets.download_dataset(
         args.dataset_id
     ).decode("utf-8").splitlines()[1:]
+
+    ena_links = upload_from_ena_links(ena_links, gi, args.history_id, args.upload_attempts)
+
     yaml = records_to_yaml(
-        parse_ena_fastq_ftp_links(ena_links, gi, args.history_id, args.upload_attempts),
+        parse_ena_fastq_ftp_links(ena_links),
         args.collection_name
     )
     if args.output:
