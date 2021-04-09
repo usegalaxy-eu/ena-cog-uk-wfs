@@ -40,10 +40,8 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     python bioblend-scripts/ftp_links_to_yaml.py $ENA_LINKS "$DOWNLOADED_DATA_COLLECTION" -i $DOWNLOAD_HISTORY -g "$GALAXY_SERVER" -a $API_KEY >> "$WORKDIR/$JOB_YML" &&
     # data should be downloaded at this point, time to let planemo handle the rest!
     python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL2 -r $BOT_SIGNAL1
-    # wait for successful completion of workflow scheduling by planemo run, then add a preliminary tag to the new history
-    (while [ ! -s "$WORKDIR/run_info.txt" ]; do sleep 60; done; DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) && python bioblend-scripts/tag_history.py $DEST_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $DEST_TAG) &
     # run the WF
-    planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "COG-UK $DEST_NAME_SUFFIX" --galaxy_url "$GALAXY_SERVER" --galaxy_user_key $API_KEY --engine external_galaxy 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt" &&
+    planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "COG-UK $DEST_NAME_SUFFIX" --tags $DEST_TAG --galaxy_url "$GALAXY_SERVER" --galaxy_user_key $API_KEY --engine external_galaxy 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt" &&
     # on successful completion of the WF invocation inform downstream bots
     # by tagging the new history accordingly
     DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) &&
