@@ -2,16 +2,49 @@
 Takes a list of ftp links and converts to a yaml file ready for upload with planemo run
 """
 import argparse
+import time
 import yaml
 
 from bioblend import galaxy
+
+NON_OK_TERMINAL_STATES = {
+    'empty', 'error', 'discarded', 'failed_metadata', 'paused'
+}
+
+def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
+    ena_links_dataset_ids = {}
+    ena_links_states = {link: 'empty' for link in ena_links}
+    ena_links_attempts_left = {link: upload_attempts for link in ena_links}
+    while True:
+        for link in ena_links:
+            if ena_links_states[link] in NON_OK_TERMINAL_STATES:
+                if ena_links_attempts_left[link] > 0:
+                    ena_links_dataset_ids[link] = gi.tools.put_url(
+                        content=f"ftp://{link}", history_id=history_id
+                    )['outputs'][0]['id']
+                    ena_links_attempts_left[link] -= 1
+                else:
+                    raise ConnectionError(
+                        'Some datasets did not upload successfully after the '
+                        'specified number of upload attempts'
+                    )
+
+        time.sleep(60)
+
+        for link in ena_links:
+            if ena_links_states[link] != 'ok':
+                ena_links_states[link] = gi.datasets.show_dataset(
+                    ena_links_dataset_ids[link]
+                )['state']
+        if set(ena_links_states.values()) == {'ok'}:
+            return ena_links_dataset_ids
 
 
 def parse_ena_fastq_ftp_links(ena_links):
     records = {}
     pe_indicator_mapping = {'1': 'forward', '2': 'reverse'}
     is_pe_data = None
-    for link in ena_links:
+    for link, dataset_id in ena_links.items():
         path, file = link.rsplit('/', maxsplit=1)
         ena_id, file_suffix = file.split('.', maxsplit=1)
         link = 'ftp://' + link
@@ -30,9 +63,9 @@ def parse_ena_fastq_ftp_links(ena_links):
             ena_id, pe_indicator = ena_id.split('_')
             if ena_id not in records:
                 records[ena_id] = {}
-            records[ena_id][pe_indicator_mapping[pe_indicator]] = link
+            records[ena_id][pe_indicator_mapping[pe_indicator]] = dataset_id
         else:
-            records[ena_id] = link
+            records[ena_id] = dataset_id
     return records
 
 
@@ -51,12 +84,12 @@ def records_to_yml_dict(records):
                     {
                         'class': 'File',
                         'identifier': 'forward',
-                        'location': links['forward']
+                        'galaxy_id': links['forward']
                     },
                     {
                         'class': 'File',
                         'identifier': 'reverse',
-                        'location': links['reverse']
+                        'galaxy_id': links['reverse']
                     }
                 ]
             } for record_id, links in records.items()
@@ -67,7 +100,7 @@ def records_to_yml_dict(records):
             {
                 'class': 'File',
                 'identifier': record_id,
-                'location': link
+                'galaxy_id': link
             } for record_id, link in records.items()
         ]
     return yml_dict
@@ -101,6 +134,14 @@ if __name__ == '__main__':
         '-o', '--output',
         help='Write output to this file instead of to standard output'
     )
+    parser.add_argument(
+        '-i', '--history_id',
+        help='History ID for uploading datasets'
+    )
+    parser.add_argument(
+        '-u', '--upload_attempts', type=int, default=20,
+        help='Number of retry attempts for dataset upload failures',
+    )
     args = parser.parse_args()
 
     gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
@@ -108,6 +149,9 @@ if __name__ == '__main__':
     ena_links = gi.datasets.download_dataset(
         args.dataset_id
     ).decode("utf-8").splitlines()[1:]
+
+    ena_links = upload_from_ena_links(ena_links, gi, args.history_id, args.upload_attempts)
+
     yaml = records_to_yaml(
         parse_ena_fastq_ftp_links(ena_links),
         args.collection_name

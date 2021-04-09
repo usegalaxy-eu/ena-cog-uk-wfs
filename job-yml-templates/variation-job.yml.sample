@@ -1,5 +1,6 @@
 #use_server: https://usegalaxy.eu
 #use_workflow_id: 48509fef29ad8166
+#history_for_downloads: 96cd6d8191d4e3d6
 
 #from_history_name: {histories[0][name]}
 #from_history_id: {histories[0][id]}
