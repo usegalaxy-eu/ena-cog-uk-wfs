@@ -14,39 +14,30 @@ NON_OK_TERMINAL_STATES = {
 def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
     ena_links_dataset_ids = {}
     ena_links_states = {link: 'empty' for link in ena_links}
-    while upload_attempts > 0:
+    ena_links_attempts_left = {link: upload_attempts for link in ena_links}
+    while True:
         for link in ena_links:
             if ena_links_states[link] in NON_OK_TERMINAL_STATES:
-                ena_links_dataset_ids[link] = gi.tools.put_url(content=f"ftp://{link}", history_id=history_id)['outputs'][0]['id']
+                if ena_links_attempts_left[link] > 0:
+                    ena_links_dataset_ids[link] = gi.tools.put_url(
+                        content=f"ftp://{link}", history_id=history_id
+                    )['outputs'][0]['id']
+                    ena_links_attempts_left[link] -= 1
+            else:
+                raise ConnectionError(
+                    'Some datasets did not upload successfully after the '
+                    'specified number of upload attempts'
+                )
 
         time.sleep(60)
 
         for link in ena_links:
             if ena_links_states[link] != 'ok':
-                ena_links_states[link] = gi.datasets.show_dataset(ena_links_dataset_ids[link])['state']
+                ena_links_states[link] = gi.datasets.show_dataset(
+                    ena_links_dataset_ids[link]
+                )['state']
         if set(ena_links_states.values()) == {'ok'}:
             return ena_links_dataset_ids
-
-        upload_attempts -= 1
-
-    raise Exception("Some datasets did not upload successfully after the specified number of upload attempts")
-
-
-# def upload_dataset(gi, link, history_id, upload_attempts):
-#     while upload_attempts > 0:
-#         dataset_id = gi.tools.put_url(content=link, history_id=history_id)['outputs'][0]['id']
-#         print(dataset_id)
-#         for _ in range(100):
-#             state = gi.datasets.show_dataset(dataset_id)['state']
-#             if state not in TERMINAL_STATES:
-#                 time.sleep(10)
-#                 continue
-#             else:
-#                 if state == 'ok':
-#                     return dataset_id
-#                 else:
-#                     break
-#         upload_attempts -= 1
 
 
 def parse_ena_fastq_ftp_links(ena_links):
@@ -148,9 +139,8 @@ if __name__ == '__main__':
         help='History ID for uploading datasets'
     )
     parser.add_argument(
-        '-u', '--upload_attempts',
+        '-u', '--upload_attempts', type=int, default=20,
         help='Number of retry attempts for dataset upload failures',
-        type=int
     )
     args = parser.parse_args()
 
