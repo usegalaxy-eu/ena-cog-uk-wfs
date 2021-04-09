@@ -23,11 +23,11 @@ def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
                         content=f"ftp://{link}", history_id=history_id
                     )['outputs'][0]['id']
                     ena_links_attempts_left[link] -= 1
-            else:
-                raise ConnectionError(
-                    'Some datasets did not upload successfully after the '
-                    'specified number of upload attempts'
-                )
+                else:
+                    raise ConnectionError(
+                        'Some datasets did not upload successfully after the '
+                        'specified number of upload attempts'
+                    )
 
         time.sleep(60)
 
