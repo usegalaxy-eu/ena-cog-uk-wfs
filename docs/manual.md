@@ -34,9 +34,9 @@ Each automation script works completely independent from all others. Their
 interaction occurs exclusively through tags that they put on datasets and
 histories.
 
-Because they are independent from each other the scripts are also configured
-independent from one another. You will find one `*-job.yml.sample` file per
-script inside the `job-yml-templates` folder.
+Because they are independent from each other the scripts are also *configured*
+independent from one another. For this purpose, you will find one
+`*-job.yml.sample` file per script inside the `job-yml-templates` folder.
 
 To configure any of the scripts:
 
@@ -44,20 +44,25 @@ To configure any of the scripts:
 
    `cp variation-job.yml.sample variation-job.yml`
 
-2. Open the newly created copy in your favorite editor and modify the lines starting with `#` in the first section and lines starting with `galaxy_id` throughout the file to customize the corresponding script's behavior.
+2. Open the newly created copy in your favorite editor and modify
 
-   *Important* notes:
+   - lines starting with `#` in the *first* section of the file
+   - lines starting with `galaxy_id` anywhere in the file
 
-   Do **not** change any lines beyond the first section unless they start with
-   `galaxy_id:` (see below)!
+   to customize the corresponding script's behavior.
 
-   For any line you *do* change, edit only the *value* (anything to the right
-   of the `:`; in particular, do *not* uncomment lines) and make sure that you
-   preserve the space between the `:` and the value!
+   **Important rules**:
 
-   Do *not* enclose values in quotes!
+     - Do **not** change any lines beyond the first section unless they start
+       with `galaxy_id:` (see below)!
 
-   - Since each of the scripts is going to execute a specific Galaxy workflow as part of its action, you will need to configure at a minimum:
+     - For any line you *do* change, edit only the *value* (anything to the
+       right of the `:`; in particular, do *not* uncomment lines) and make sure
+       that you preserve the space between the `:` and the value!
+
+     - Do *not* enclose values in quotes!
+
+   1. Since each of the scripts is going to execute a specific Galaxy workflow as part of its action, you will need to configure at a minimum:
 
      - the Galaxy server the workflow should be run on
      - the ID of the workflow on the server
@@ -81,7 +86,7 @@ To configure any of the scripts:
      efforts of covid19.galaxyproject.org. Change them to whatever makes sense
      for your purpose.
 
-   - The `variation-job.yml` file contains four additional configuration options, which determine how the variation script locates the raw data to download, and where it is going to download the data to:
+   2. The `variation-job.yml` file contains four additional configuration options, which determine how the variation script locates the raw data to download, and where it is going to download the data to:
 
      - `history_for_downloads`
 
@@ -114,7 +119,7 @@ To configure any of the scripts:
 
        Examples: `ftp`, `http`
 
-   - With the exception of the export script, each script requires some reference datasets to function properly.
+   3. With the exception of the export script, each script requires some reference datasets to function properly.
 
      These datasets will be identical for all runs of the script and are
      expected to be accessible from your user account on the target Galaxy
@@ -182,4 +187,53 @@ The only prerequisite is that, as in the manual steps above, the scheduler
 before executing any of the automation scripts.
 
 *Note*: On usegalaxy.eu we are using our Jenkins server to schedule runs of the scripts for our COG-UK tracking efforts. If you are interested in having us schedule your own analysis runs for you, just ask us.
+
+### Troubleshooting
+
+As each script is running it will do the following:
+
+1. Create a new history and add the configurable script tag to it.
+
+   Note: The variation script will only do so after it has successfully
+   uploaded all required raw data to the staging history.
+
+2. Tag its input history, *i.e.* the history with the data that this specific
+   script run will be processing further with a `*-bot-scheduling` tag, where
+   `*` will be the name of the script.
+
+   This tag will replace the messaging tag that the upstream script left on the
+   history when it finished.
+
+   Note: The variation script is special again in that it will not tag an input
+   *history*, but instead the specific *dataset* the links of which it is
+   processing with `bot-downloading`.
+
+2. As the workflow execution proceeds this initial *scheduling* tag will be replaced with a `*-bot-processing` tag, and finally with a `*-bot-ok` tag indicating that the data in this history has been fully processed by the downstream script.
+
+3. If the script knows of any downstream scripts that can process its results
+   further, it will now put corresponding messaging tags of the form
+   `bot-go-*` onto its output history.
+
+   Downstream scripts will, everytime you execute them, scan your histories for
+   ones with their recognized messaging tags.
+
+Once you have understood this tagging system, it is rather easy to handle
+problems with the scripts or the workflows they are triggering through Galaxy's
+graphical user interface.
+On the `User -> Histories` page you can filter your histories by name and tags,
+which allows you to quickly locate the various histories produced by the
+scripts at their different stages. If you discover something went wrong, you
+can usually trigger a re-analysis of the corresponding batch of data by
+removing, adding or changing a messaging tag.
+
+An example: Suppose that you have run the *consensus* script on data generated
+by the *variation* script. The consensus workflow got scheduled successfully,
+but then the consensus analysis has failed because of a server problem.
+Depending on the exact situation you will now have a *consensus* history tagged `consensus` or whatever you configured as the script's tag with some failed
+datasets in it, and a corresponding *variation* history with a
+`consensus-bot-processing` or a `consensus-bot-ok` tag on it. To allow a rerun
+of the *consensus* script on the same *variation* history you would simply
+remove that tag from it and add a `bot-go-consensus` tag instead, which tells
+the *consensus* script that this history still needs processing. You can then
+purge the failed *consensus* attempt and wait for the reanalysis.
 
