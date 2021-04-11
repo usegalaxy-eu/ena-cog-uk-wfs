@@ -158,10 +158,10 @@ To configure any of the scripts:
 
 3. Run the desired script with, e.g.:
 
-   ./run_variation.sh
+   `./run_variation.sh`
 
    Each of the scripts will scan your histories for tags indicating that there
-   is new data waiting to be processed. If there isn't the script run will
+   is new data waiting to be processed. If there isn't, the script run will
    terminate immediately.
 
    The computationally heaviest variation script will check in addition that
@@ -177,7 +177,7 @@ To configure any of the scripts:
 
 Since all scripts communicate exclusively via standard Galaxy tags automating
 their execution is not tied to any particular scheduling system. You could use,
-*e,g,* cron jobs or systemd timers for scheduling.
+*e.g.* cron jobs or systemd timers for scheduling.
 
 The only prerequisite is that, as in the manual steps above, the scheduler
 
