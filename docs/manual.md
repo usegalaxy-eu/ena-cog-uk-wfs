@@ -146,8 +146,8 @@ To configure any of the scripts:
 
    `export API_KEY=<your API key>`
 
-   where <your API key> needs to be replaced with the actual API key associated
-   with your user account on the target Galaxy instance.
+   where `<your API key>` needs to be replaced with the actual API key
+   associated with your user account on the target Galaxy instance.
 
    *Note*: Your API key replaces your standard login credentials (user name
    and password). As such it should be kept as securely as your password and
