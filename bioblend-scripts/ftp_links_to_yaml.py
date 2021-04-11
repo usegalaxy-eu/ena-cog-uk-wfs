@@ -51,7 +51,6 @@ def parse_ena_fastq_ftp_links(ena_links):
     for link, dataset_id in ena_links.items():
         path, file = link.rsplit('/', maxsplit=1)
         ena_id, file_suffix = file.split('.', maxsplit=1)
-        link = 'ftp://' + link
         if is_pe_data is None:
             # Use the first link to decide wether we are dealing with
             # SE or PE data links.
