@@ -1,0 +1,73 @@
+# Preparing a history with download links
+
+If using the *variation* script you do not have to handle the uploads of your
+sequencing data yourself. All you need to do is upload simple text files with
+download links for the data into a specially tagged history. The *variation*
+script will  scan the history for you, parse the links, upload the data and
+trigger variation analysis runs as the data becomes available.
+
+To make this work you need to structure the history according to the
+expectations of the script. Here's how to do that:
+
+1. For each batch of samples you want to analyze prepare *one* text file with
+   download links.
+   
+   - Links found in one file will be analyzed as one batch in one script run in Galaxy
+   - There must be one link per line in the file
+   - Links must follow the format:
+
+     `<baseurl>/<sampleID>_[12].<file_extension>`
+
+     for example,
+     
+     `ftp.sra.ebi.ac.uk/vol1/fastq/ERR545/006/ERR5451836/ERR5451836_1.fastq.gz`
+     
+     specifies an ENA download link for the forward (`_1`) reads of a sample
+     with ID `ERR5451836`.
+     
+   - The order of links in the file does not matter.
+   
+     You must, however, specify exactly one forward (`_1`) reads and one
+     reverse (`_2`) reads file for each sample.
+     
+   - If links do not specify the transport protocol directly like in the above example you need to configure the protocol in the *variation* script's config file (see the scripts [Usage instructions](./manual.md))
+
+2. Create a new history on your target Galaxy server
+
+3. Upload your batch files with download links to the new history as a Galaxy *Collection*
+
+   - Open the Galaxy Upload Manager (by clicking the Upload Data button on the top-right of the tool panel)
+
+   - In the `Download from web or upload from disk` dialogue window, switch to the `Collection` tab and confirm that `Collection Type` is set to `List`
+     
+   - Select `Choose local files`
+   
+   - Select the files you want to upload
+   
+   - Press `Start`
+   
+   - Once the `Build` button gets enabled, click on it
+   
+   - In the ensuing dialog, enter a name for the collection
+
+     **Important**: The name has to match the `metadata_collection_name` set in
+     the *variation* script config file (see the scripts
+     [Usage instructions](./manual.md))
+     
+   - Press `Create list`
+
+4. To make the *variation* script aware of the history and start processing the download links in the collection add its recognized tag to your history
+
+   The history tag that the *variation* script will be looking for can be set
+   in its configuration file under `metadata_history_tag`.
+
+   Click on the `Edit history tags` icon below the history name in the history
+   panel. This will reveal any existing tags (none in your case) of the history
+   and a big tag icon. Click on the icon, start typing the name as it appears
+   in the config file and confirm with the Enter key.
+
+That's it! Upon the next run of the *variation* script it will pick up the
+history and process the first unprocessed links dataset in any suitably named
+collections. Then in each subsequent run it will work on the links in the next
+dataset until all datasets are processed.
+
