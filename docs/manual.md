@@ -186,7 +186,7 @@ The only prerequisite is that, as in the manual steps above, the scheduler
 
 before executing any of the automation scripts.
 
-*Note*: On usegalaxy.eu we are using our Jenkins server to schedule runs of the scripts for our COG-UK tracking efforts. If you are interested in having us schedule your own analysis runs for you, just ask us.
+*Note*: On usegalaxy.eu we are using our Jenkins server to schedule runs of the scripts for our COG-UK tracking efforts. If you are interested in having us schedule your own analysis runs for you, just ask us under contact@usegalaxy.eu.
 
 ### Troubleshooting
 
