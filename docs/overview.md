@@ -46,6 +46,15 @@ Learn more about:
 - [Uploading and organizing download links files](./data_import.md)
 - [Installation and configuration of the scripts](./manual.md)
 
+## Limitations
+
+The current collection of scripts supports *only* analysis of ARTIC-amplified
+paired-end sequencing data as this is by far the most commonly used protocol
+in large-scale sequencing efforts.
+
+We hope to be able to offer support for other sequencing protocols in future
+releases. See also the next paragraph :)
+
 ## Contributions welcome
 
 The current scripts support our COG-UK tracking efforts on usegalaxy.*
