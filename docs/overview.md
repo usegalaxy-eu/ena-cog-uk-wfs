@@ -5,8 +5,9 @@
 Our automation solution comes in the form of a collection of independent small
 scripts powered by the [bioblend](https://github.com/galaxyproject/bioblend)
 library for interacting with the Galaxy API and by the
-[workflow execution functionality](https://github.com/galaxyproject/planemo) of
-the [planemo](https://github.com/galaxyproject/planemo) command-line utilities.
+[workflow execution functionality](https://planemo.readthedocs.io/en/latest/running.html#workflow-execution-against-an-external-galaxy)
+of the [planemo](https://github.com/galaxyproject/planemo) command-line
+utilities.
 
 ## Tag-based orchestration of scripts
 
@@ -21,7 +22,7 @@ pipeline for ARTIC paired-end sequencing data that includes
 - variant calling using our highly sensitive [published workflow for variation analysis on ARTIC PE data](https://github.com/iwc-workflows/sars-cov-2-pe-illumina-artic-variant-calling)
 - generation of reports of all identified variants
 - reliable consensus sequence building including soft-masking of questionable sites
-- export of key analysis results - BAM files of aligned reads, VCF files of called variants, FASTA consensus sequences to a user-specific FTP folder for simplified downloading with standaard FTP clients.
+- export of key analysis results - BAM files of aligned reads, VCF files of called variants, FASTA consensus sequences to a user-specific FTP folder for simplified downloading with standard FTP clients.
 
 The full pipeline with all script actions looks like this:
 
@@ -37,7 +38,7 @@ The full pipeline with all script actions looks like this:
    that history as one holding datasets with data download links that should be
    processed
 
-3. You arrange alternating runs of our scripts and watch the automated
+3. You arrange alternating runs of the scripts and watch the automated
    batch-wise analysis of your data live in the Galaxy UI!
 
 Learn more about:
@@ -48,8 +49,8 @@ Learn more about:
 ## Contributions welcome
 
 The current scripts support our COG-UK tracking efforts on usegalaxy.*
-instances, but we hope to be able to expand the collection based on independent
-user, *i.e* **your** feedback and contributions!
+instances quite well, but we hope to be able to expand the collection based on
+independent user, *i.e.* **your**, feedback and contributions!
 
 Bug reports, ideas, patches, additional scripts - whatever you can provide is
 very welcome!
