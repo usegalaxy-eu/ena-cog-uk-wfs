@@ -41,10 +41,13 @@ expectations of the script. Here's how to do that:
    - Open the Galaxy Upload Manager (by clicking the Upload Data button on the top-right of the tool panel)
 
    - In the `Download from web or upload from disk` dialogue window, switch to the `Collection` tab and confirm that `Collection Type` is set to `List`
-     
+
+     **Note**: Even if you have just a single dataset with links from just one
+     batch of data, you need to upload it into a (single-element) collection!
+
    - Select `Choose local files`
    
-   - Select the files you want to upload
+   - Select the file(s) you want to upload
    
    - Press `Start`
    
