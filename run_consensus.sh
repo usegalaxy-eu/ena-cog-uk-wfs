@@ -3,17 +3,17 @@ BOT_TAG='bot-go-consensus'
 BOT_STATUS1='consensus-bot-scheduling'
 BOT_STATUS2='consensus-bot-processing'
 BOT_STATUS3='consensus-bot-ok'
-DEST_TAG='cog-uk_consensus'
-DEST_NAME_SUFFIX='Consensus'
 DEST_BOT_TAG='bot-go-export'
 BAM_DATA='Fully processed reads for variant calling (primer-trimmed, realigned reads with added indelquals)'
 VCF_DATA='Final (SnpEff-) annotated variants'
 JOB_YML='consensus-job.yml'
 
-# common for all bots
+# read bot config
 JOB_YML_DIR='job-yml-templates'
 GALAXY_SERVER=$(grep '#use_server:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 WF_ID=$(grep '#use_workflow_id:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
+DEST_NAME_SUFFIX=$(grep '#new_history_name_suffix:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
+DEST_TAG=$(grep '#new_history_tag:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 
 # start processing
 WORKDIR=$BOT_TAG'_run_'$(date '+%s')

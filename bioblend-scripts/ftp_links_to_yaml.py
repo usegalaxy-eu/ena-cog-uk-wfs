@@ -1,6 +1,8 @@
 """
-Takes a list of ftp links and converts to a yaml file ready for upload with planemo run
+Takes a list of links and converts to a yaml file ready for upload with
+planemo run.
 """
+
 import argparse
 import time
 import yaml
@@ -15,12 +17,14 @@ def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
     ena_links_dataset_ids = {}
     ena_links_states = {link: 'empty' for link in ena_links}
     ena_links_attempts_left = {link: upload_attempts for link in ena_links}
+
     while True:
         for link in ena_links:
             if ena_links_states[link] in NON_OK_TERMINAL_STATES:
                 if ena_links_attempts_left[link] > 0:
                     ena_links_dataset_ids[link] = gi.tools.put_url(
-                        content=f"ftp://{link}", history_id=history_id
+                        content=link,
+                        history_id=history_id
                     )['outputs'][0]['id']
                     ena_links_attempts_left[link] -= 1
                 else:
@@ -139,6 +143,10 @@ if __name__ == '__main__':
         help='History ID for uploading datasets'
     )
     parser.add_argument(
+        '-p', '--protocol', default='ftp',
+        help='Default transfer protocol'
+    )
+    parser.add_argument(
         '-u', '--upload_attempts', type=int, default=20,
         help='Number of retry attempts for dataset upload failures',
     )
@@ -146,16 +154,24 @@ if __name__ == '__main__':
 
     gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
 
-    ena_links = gi.datasets.download_dataset(
+    links = gi.datasets.download_dataset(
         args.dataset_id
     ).decode("utf-8").splitlines()[1:]
 
-    ena_links = upload_from_ena_links(ena_links, gi, args.history_id, args.upload_attempts)
+    links = [
+        link if link.partition('://')[2] else f'{args.protocol}://{link}'
+        for link in links
+    ]
 
     yaml = records_to_yaml(
-        parse_ena_fastq_ftp_links(ena_links),
+        parse_ena_fastq_ftp_links(
+            upload_from_ena_links(
+                links, gi, args.history_id, args.upload_attempts
+            )
+        ),
         args.collection_name
     )
+
     if args.output:
         with open(args.output, 'w') as f:
             f.write(yaml)

@@ -1,5 +1,7 @@
 #use_server: https://usegalaxy.eu
 #use_workflow_id: 7b5c08de9d78a868
+#new_history_name_suffix: Consensus
+#new_history_tag: cog-uk_consensus
 
 #from_history_name: {histories[0][name]}
 #from_history_id: {histories[0][id]}
