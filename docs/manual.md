@@ -146,8 +146,8 @@ To configure any of the scripts:
 
    `export API_KEY=<your API key>`
 
-   where <your API key> needs to be replaced with the actual API key associated
-   with your user account on the target Galaxy instance.
+   where `<your API key>` needs to be replaced with the actual API key
+   associated with your user account on the target Galaxy instance.
 
    *Note*: Your API key replaces your standard login credentials (user name
    and password). As such it should be kept as securely as your password and
@@ -186,7 +186,7 @@ The only prerequisite is that, as in the manual steps above, the scheduler
 
 before executing any of the automation scripts.
 
-*Note*: On usegalaxy.eu we are using our Jenkins server to schedule runs of the scripts for our COG-UK tracking efforts. If you are interested in having us schedule your own analysis runs for you, just ask us.
+*Note*: On usegalaxy.eu we are using our Jenkins server to schedule runs of the scripts for our COG-UK tracking efforts. If you are interested in having us schedule your own analysis runs for you, just ask us under contact@usegalaxy.eu.
 
 ### Troubleshooting
 

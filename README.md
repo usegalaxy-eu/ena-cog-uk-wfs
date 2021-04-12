@@ -22,4 +22,4 @@ usegalaxy.* instance with minimal impact on the analysis needs of our users.
 You can use these scripts with little or no modifications to automate your own
 SARS-CoV-2 analyses on a public server or your own instance of Galaxy.
 
-Interested? Then [read on ...](docs/manual.md)
+Interested? Then [read on ...](docs/overview.md)
