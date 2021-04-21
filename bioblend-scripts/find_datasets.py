@@ -8,7 +8,7 @@ def show_matching_dataset_info(
     gi, history_id, dataset_names, visible=None, types=None
 ):
     history_datasets_info = gi.histories.show_history(
-        history_id, contents=True, visible=visible, types=types
+        history_id, contents=True, visible=visible, deleted=False, types=types
     )
     ret = []
     for name in dataset_names:
@@ -39,13 +39,11 @@ def get_matching_datasets_from_histories(
                 )
             else:
                 continue
-        if any(len(d) > 1 for d in datasets):
-            raise ValueError(
-                'History "{0}" has multiple datasets matching one of the '
-                'provided names in "{1}".'
-                .format(history_id, dataset_names)
-            )
-        yield [d[0] for d in datasets]
+        # datasets is a nested list of matches to each of the provided
+        # dataset_names
+        # flatten that list, but revert the matches to each name,
+        # and yield it => fifo for the matches to any given name
+        yield [d for data in datasets for d in data[::-1]]
         if max_matching is not None:
             yield_count += 1
             if yield_count >= max_matching:
