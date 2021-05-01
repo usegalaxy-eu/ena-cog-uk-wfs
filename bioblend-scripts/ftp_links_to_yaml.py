@@ -24,7 +24,8 @@ def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
                 if ena_links_attempts_left[link] > 0:
                     ena_links_dataset_ids[link] = gi.tools.put_url(
                         content=link,
-                        history_id=history_id
+                        history_id=history_id,
+                        file_type='fastqsanger.gz',
                     )['outputs'][0]['id']
                     ena_links_attempts_left[link] -= 1
                 else:
