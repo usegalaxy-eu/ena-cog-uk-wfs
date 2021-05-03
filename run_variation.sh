@@ -44,6 +44,12 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     # download the data and add information about the collection to be built from it to the job yml file
     DOWNLOADED_DATA_COLLECTION='Paired Collection'
     python bioblend-scripts/ftp_links_to_yaml.py $ENA_LINKS "$DOWNLOADED_DATA_COLLECTION" -i $DOWNLOAD_HISTORY -p $DEFAULT_PROTOCOL -g "$GALAXY_SERVER" -a $API_KEY >> "$WORKDIR/$JOB_YML" &&
+    if grep "list:list" "$WORKDIR/$JOB_YML"; then
+        WF_ID=$(grep '#nested_list_workflow_id:' "$WORKDIR/$JOB_YML" | cut -d ' ' -f 2-) &&
+        sed "s/Paired Collection_fw:/Nested collection of forward reads:/;s/Paired Collection_rv:/Nested collection of reverse reads:/" "$WORKDIR/$JOB_YML"
+    else
+        WF_ID=$(grep '#list_pe_workflow_id:' "$WORKDIR/$JOB_YML" | cut -d ' ' -f 2-)
+    fi
     # data should be downloaded at this point, time to let planemo handle the rest!
     python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL2 -r $BOT_SIGNAL1
     # run the WF
