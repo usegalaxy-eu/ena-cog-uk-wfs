@@ -105,7 +105,7 @@ def nested_records_to_yml_dict(records, collection_name):
         fw_yml_dict['elements'].append(
             {
                 'class': 'Collection',
-                'identifer': outer_id,
+                'identifier': outer_id,
                 'type': 'list',
                 'elements': []
             }
@@ -114,7 +114,7 @@ def nested_records_to_yml_dict(records, collection_name):
             rv_yml_dict['elements'].append(
                 {
                     'class': 'Collection',
-                    'identifer': outer_id,
+                    'identifier': outer_id,
                     'type': 'list',
                     'elements': []
                 }
