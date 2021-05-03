@@ -246,7 +246,7 @@ if __name__ == '__main__':
 
     data_specs = gi.datasets.download_dataset(
         args.dataset_id
-    ).decode("utf-8").splitlines()
+    ).decode("utf-8").splitlines()[1:]
 
     links = []
     link_record_mapping = {}
