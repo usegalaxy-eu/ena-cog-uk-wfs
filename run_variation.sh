@@ -8,7 +8,6 @@ JOB_YML='variation-job.yml'
 # read bot config
 JOB_YML_DIR='job-yml-templates'
 GALAXY_SERVER=$(grep '#use_server:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
-WF_ID=$(grep '#use_workflow_id:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 DEST_NAME_BASE=$(grep '#new_history_base_name:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 DEST_TAG=$(grep '#new_history_tag:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 # variation bot-only config
@@ -46,7 +45,8 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     python bioblend-scripts/ftp_links_to_yaml.py $ENA_LINKS "$DOWNLOADED_DATA_COLLECTION" -i $DOWNLOAD_HISTORY -p $DEFAULT_PROTOCOL -g "$GALAXY_SERVER" -a $API_KEY >> "$WORKDIR/$JOB_YML" &&
     if grep "list:list" "$WORKDIR/$JOB_YML"; then
         WF_ID=$(grep '#nested_list_workflow_id:' "$WORKDIR/$JOB_YML" | cut -d ' ' -f 2-) &&
-        sed "s/Paired Collection_fw:/Nested collection of forward reads:/;s/Paired Collection_rv:/Nested collection of reverse reads:/" "$WORKDIR/$JOB_YML"
+        mv "$WORKDIR/$JOB_YML" "$WORKDIR/$JOB_YML".tmp &&
+        sed "s/Paired Collection_fw:/Nested collection of forward reads:/;s/Paired Collection_rv:/Nested collection of reverse reads:/" "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML"
     else
         WF_ID=$(grep '#list_pe_workflow_id:' "$WORKDIR/$JOB_YML" | cut -d ' ' -f 2-)
     fi
