@@ -45,35 +45,117 @@ def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
             return ena_links_dataset_ids
 
 
-def parse_ena_fastq_ftp_links(ena_links):
+def parse_ena_fastq_ftp_links(ena_links, link_record_mapping=None):
+    if link_record_mapping is None:
+        link_record_mapping = {}
     records = {}
     pe_indicator_mapping = {'1': 'forward', '2': 'reverse'}
     is_pe_data = None
     for link, dataset_id in ena_links.items():
         path, file = link.rsplit('/', maxsplit=1)
-        ena_id, file_suffix = file.split('.', maxsplit=1)
+        file_base, file_suffix = file.split('.', maxsplit=1)
         if is_pe_data is None:
             # Use the first link to decide wether we are dealing with
             # SE or PE data links.
             # If the preparsed ENA ID ends in '_1' or '_2' the links are
             # for PE data. Anything else is treated as SE data links.
             try:
-                a, b = ena_id.rsplit('_')
+                a, b = file_base.rsplit('_')
                 pe_indicator = pe_indicator_mapping[b]
                 is_pe_data = True
             except (ValueError, KeyError):
                 is_pe_data = False
         if is_pe_data:
-            ena_id, pe_indicator = ena_id.split('_')
-            if ena_id not in records:
-                records[ena_id] = {}
-            records[ena_id][pe_indicator_mapping[pe_indicator]] = dataset_id
+            file_base, pe_indicator = file_base.split('_')
+            record_id = link_record_mapping.get(link, file_base)
+            if record_id not in records:
+                records[record_id] = {}
+            if file_base not in records[record_id]:
+                records[record_id][file_base] = {}
+            records[record_id][file_base][
+                pe_indicator_mapping[pe_indicator]
+            ] = dataset_id
         else:
-            records[ena_id] = dataset_id
+            record_id = link_record_mapping.get(link, file_base)
+            if record_id not in records:
+                records[record_id] = {}
+            records[record_id][file_base] = dataset_id
     return records
 
 
-def records_to_yml_dict(records):
+def nested_records_to_yml_dict(records, collection_name):
+    fw_yml_dict = {
+        'class': 'Collection',
+        'collection_type': 'list:list',
+        'elements': []
+    }
+    # inspect first inner element
+    # to see if we are dealing with SE or PE records
+    first_value = next(iter(next(iter(records.values())).values()))
+    if isinstance(first_value, dict):
+        is_pe = True
+        rv_yml_dict = {
+            'class': 'Collection',
+            'collection_type': 'list:list',
+            'elements': []
+        }
+    else:
+        is_pe = False
+    for outer_id, record in records.items():
+        fw_yml_dict['elements'].append(
+            {
+                'class': 'Collection',
+                'identifier': outer_id,
+                'type': 'list',
+                'elements': []
+            }
+        )
+        if is_pe:
+            rv_yml_dict['elements'].append(
+                {
+                    'class': 'Collection',
+                    'identifier': outer_id,
+                    'type': 'list',
+                    'elements': []
+                }
+            )
+
+        for inner_id, link in record.items():
+            if is_pe:
+                fw_yml_dict['elements'][-1]['elements'].append(
+                    {
+                        'class': 'File',
+                        'identifier': inner_id,
+                        'galaxy_id': link['forward']
+                    }
+                )
+                rv_yml_dict['elements'][-1]['elements'].append(
+                    {
+                        'class': 'File',
+                        'identifier': inner_id,
+                        'galaxy_id': link['reverse']
+                    }
+                )
+            else:
+                fw_yml_dict['elements'][-1]['elements'].append(
+                    {
+                        'class': 'File',
+                        'identifier': inner_id,
+                        'galaxy_id': link
+                    }
+                )
+    if is_pe:
+        return {
+            collection_name + '_fw': fw_yml_dict,
+            collection_name + '_rv': rv_yml_dict
+        }
+    else:
+        return {
+            collection_name: fw_yml_dict
+        }
+
+
+def records_to_yml_dict(records, collection_name):
     yml_dict = {'class': 'Collection', 'elements': []}
     # inspect first element to see if we are dealing with SE or PE records
     first_value = next(iter(records.values()))
@@ -107,11 +189,19 @@ def records_to_yml_dict(records):
                 'galaxy_id': link
             } for record_id, link in records.items()
         ]
-    return yml_dict
+    return {collection_name: yml_dict}
 
 
 def records_to_yaml(records, collection_name):
-    return yaml.dump({collection_name: records_to_yml_dict(records)})
+    if any(len(v) > 1 for v in records.values()):
+        yml_dict_gen = nested_records_to_yml_dict
+    else:
+        # flatten the records dictionary struture
+        for record_id, record in records.items():
+            records[record_id] = next(iter(record.values()))
+        yml_dict_gen = records_to_yml_dict
+
+    return yaml.dump(yml_dict_gen(records, collection_name))
 
 
 if __name__ == '__main__':
@@ -154,20 +244,25 @@ if __name__ == '__main__':
 
     gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
 
-    links = gi.datasets.download_dataset(
+    data_specs = gi.datasets.download_dataset(
         args.dataset_id
     ).decode("utf-8").splitlines()[1:]
 
-    links = [
-        link if link.partition('://')[2] else f'{args.protocol}://{link}'
-        for link in links
-    ]
+    links = []
+    link_record_mapping = {}
+    for data_spec in data_specs:
+        record_id, sep, link = [d.strip() for d in data_spec.rpartition(':')]
+        if '://' not in link:
+            link = f'{args.protocol}://{link}'
+        links.append(link)
+        if record_id:
+            link_record_mapping[link] = record_id
 
     yaml = records_to_yaml(
         parse_ena_fastq_ftp_links(
             upload_from_ena_links(
                 links, gi, args.history_id, args.upload_attempts
-            )
+            ), link_record_mapping
         ),
         args.collection_name
     )

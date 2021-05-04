@@ -3,7 +3,7 @@
 If using the *variation* script you do not have to handle the uploads of your
 sequencing data yourself. All you need to do is upload simple text files with
 download links for the data into a specially tagged history. The *variation*
-script will  scan the history for you, parse the links, upload the data and
+script will scan the history for you, parse the links, upload the data and
 trigger variation analysis runs as the data becomes available.
 
 To make this work you need to structure the history according to the
@@ -14,18 +14,59 @@ expectations of the script. Here's how to do that:
    
    - Links found in one file will be analyzed as one batch in one script run in Galaxy
    - There must be one link per line in the file
-   - Links must follow the format:
+   - Link lines must follow one of these formats:
 
-     `<baseurl>/<sampleID>_[12].<file_extension>`
+     * Just a link in the form:
 
-     for example,
+       `<baseurl>/<sampleID>_[12].<file_extension>`
+
+       for example,
      
-     `ftp.sra.ebi.ac.uk/vol1/fastq/ERR545/006/ERR5451836/ERR5451836_1.fastq.gz`
+       `ftp.sra.ebi.ac.uk/vol1/fastq/ERR545/006/ERR5451836/ERR5451836_1.fastq.gz`
      
-     specifies an ENA download link for the forward (`_1`) reads of a sample
-     with ID `ERR5451836`.
-     
-   - The order of links in the file does not matter.
+       specifies an ENA download link for the forward (`_1`) reads of a sample
+       with ID `ERR5451836`.
+
+     * Explicit sample ID and link:
+
+       `<sample_id>: <baseurl>/<arbitrary_name>_[12].<file_extension>`
+
+       for example:
+
+       `ERR5451836: https://files.my-server.org/sample001_1.fq.gz`
+
+       The explicitly provided sample ID will take precedence over the
+       downloaded file's base name.
+
+     * Explicit sample IDs and links with sample IDs reused on multiple lines
+
+       Example:
+
+       ```
+       ERX5451093: ftp.sra.ebi.ac.uk/vol1/fastq/ERR573/000/ERR5739250/ERR5739250_1.fastq.gz
+       ERX5451093: ftp.sra.ebi.ac.uk/vol1/fastq/ERR573/000/ERR5739250/ERR5739250_2.fastq.gz
+       ERX5451093: ftp.sra.ebi.ac.uk/vol1/fastq/ERR573/001/ERR5739251/ERR5739251_1.fastq.gz
+       ERX5451093: ftp.sra.ebi.ac.uk/vol1/fastq/ERR573/001/ERR5739251/ERR5739251_2.fastq.gz
+       ERX5451094: ftp.sra.ebi.ac.uk/vol1/fastq/ERR573/005/ERR5739255/ERR5739255_1.fastq.gz
+       ERX5451094: ftp.sra.ebi.ac.uk/vol1/fastq/ERR573/005/ERR5739255/ERR5739255_2.fastq.gz
+       ERX5451094: ftp.sra.ebi.ac.uk/vol1/fastq/ERR573/006/ERR5739256/ERR5739256_1.fastq.gz
+       ERX5451094: ftp.sra.ebi.ac.uk/vol1/fastq/ERR573/006/ERR5739256/ERR5739256_2.fastq.gz
+       ```
+
+       Cases like this are interpreted as the linked datasets representing
+       partial data of the indicated samples. Using this format will trigger
+       the execution of an extended workflow version that merges the partial
+       data first into combined datasets for each indicated sample before
+       performing a regular variation analysis.
+
+       In the above example `ERR5739250` and `ERR5739251` represent partial
+       data of a sample described by ENA experiment `ERX5451093`, while
+       `ERR5739255` and `ERR5739256` each provide partial data for
+       `ERX5451094`. If specified like above, the variation script will
+       trigger an analysis for two samples, `ERX5451093` and `ERX5451094` with
+       the downloaded data merged and rearranged appropriately.
+
+   - The order of lines in the file does not matter.
    
      You must, however, specify exactly one forward (`_1`) reads and one
      reverse (`_2`) reads file for each sample.
