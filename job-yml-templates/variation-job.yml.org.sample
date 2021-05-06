@@ -1,0 +1,33 @@
+#use_server: https://usegalaxy.org
+#list_pe_workflow_id: 0c8d41fc77bee088
+#nested_list_workflow_id: n.a.
+#new_history_base_name: COG-UK
+#new_history_tag: cog-uk_variation
+#history_for_downloads: 8503095a82c30814
+#metadata_history_tag: bot-upload-meta
+#metadata_collection_name: Links to upload
+#download_protocol: ftp
+
+## Change only if you know what you're doing
+#min_run_delta: 0.67
+
+#from_history_name: {histories[0][name]}
+#from_history_id: {histories[0][id]}
+#from_ena_links_in: {collections[0][elements][0][object][id]}
+#batch_name: {collections[0][elements][0][element_identifier]}
+
+ARTIC primer BED:
+  # This dataset is part of the published history
+  # https://usegalaxy.org/u/aun1/h/artic-v3
+  class: File
+  galaxy_id: bbd44e69cb8906b5c82bd16bd5b920e4
+ARTIC primers to amplicon assignments:
+  # This dataset is part of the published history
+  # https://usegalaxy.org/u/aun1/h/artic-v3
+  class: File
+  galaxy_id: bbd44e69cb8906b50f577ef2f87bde44
+NC_045512.2 FASTA sequence of SARS-CoV-2:
+  # This dataset is part of the published history
+  # https://usegalaxy.org/u/aun1/h/artic-v3
+  class: File
+  galaxy_id: bbd44e69cb8906b5ed2585053d93e340
