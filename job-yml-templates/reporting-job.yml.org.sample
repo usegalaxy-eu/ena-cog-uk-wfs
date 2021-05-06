@@ -1,0 +1,20 @@
+#use_server: https://usegalaxy.org
+#use_workflow_id: d091542fc0931b90
+#new_history_name_suffix: Reporting
+#new_history_tag: cog-uk_report
+
+#from_history_name: {histories[0][name]}
+#from_history_id: {histories[0][id]}
+
+AF Filter: 0.05
+DP Filter: 1
+DP_ALT Filter: 10
+Number of Clusters: 12
+Variation data to report:
+  class: Collection
+  galaxy_id: "{datasets[0][id]}"
+gene products translations:
+  # This dataset is part of the published history
+  # https://usegalaxy.org/u/aun1/h/artic-v3
+  class: File
+  galaxy_id: bbd44e69cb8906b556fe25cf2ac096ae
