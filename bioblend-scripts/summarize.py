@@ -1,28 +1,132 @@
+"""
+Gather, process and store information about bot processing results distributed
+across multiple histories.
+"""
+
 import json
+import subprocess
 
 from bioblend import galaxy
 
 from find_datasets import show_matching_dataset_info
 from find_by_tags import filter_objects_by_tags
 
+
+def find_longest_common_prefix(words):
+    prefix = []
+    for letters in zip(*words):
+        if len(set(letters)) > 1:
+            break
+        prefix.append(letters[0])
+    return ''.join(prefix)
+
+
+def get_ena_meta_chunk(samples):
+    not_found = set(samples)
+    ret = {}
+    for sample in samples:
+        if sample in not_found:
+            ena_accession_wildcard = sample[:-2] + '*'
+
+            with open('ena_answer.txt', 'w') as o:
+                subprocess.run(
+                    [
+                        'curl', '-X', 'POST', '-H',
+                        'Content-Type: application/x-www-form-urlencoded',
+                        '-d',
+                        'result=read_run&query=experiment_accession="{0}"%20OR%20run_accession="{0}"'
+                        '&fields=collection_date%2Cexperiment_accession%2Crun_accession%2Cstudy_accession'
+                        '&limit=0&format=tsv'
+                        .format(ena_accession_wildcard),
+                        'https://www.ebi.ac.uk/ena/portal/api/search'
+                    ],
+                    stdout=o
+                )
+            with open('ena_answer.txt') as i:
+                _ = i.readline() # throw away header line
+                for line in i:
+                    _, coll_date, exp, err, study = line.strip().split('\t')
+                    if exp == sample:
+                        # special case for e.g. Estonian data
+                        ret[exp] = (study, coll_date)
+                        if exp in not_found:
+                            not_found.remove(exp)
+                    else:
+                        ret[err] = (study, coll_date)
+                        if err in not_found:
+                            not_found.remove(err)
+
+    return ret
+
 class COGUKSummary():
-    def __init__(self, summary=None):
+    """Represent a bot analysis summary.
+
+    Stores a `summary` of bot-performed SARS-CoV-2 genomics analyses
+    as a dictionary, which can be populated from an existing JSON file, or
+    be updated through a Galaxy server query.
+
+    A `tags` and an `exclude_tags` dictionary can be provided to determine,
+    which variation, reporting and consensus histories will be picked up during
+    an update process.
+    """
+
+    def __init__(self, summary=None, tags=None, exclude_tags=None):
+        """Create a new instance.
+
+        Optionally, populate its `summary` from an existing summary dictionary.
+        """
+
         if summary:
             self.summary = summary
         else:
             self.summary = {}
+        if tags:
+            self.tags = tags
+        else:
+            self.tags = {
+                'variation': [
+                    'cog-uk_variation', 'report-bot-ok', 'consensus-bot-ok'
+                ],
+                'consensus': ['cog-uk_consensus'],
+                'report': ['cog-uk_report']
+            }
+        if exclude_tags:
+            self.exclude_tags = exclude_tags
+        else:
+            self.exclude_tags = {
+                'variation': [
+                    'bot-published'
+                ],
+                'consensus': ['bot-published'],
+                'report': ['bot-published']
+            }
 
     @classmethod
-    def from_file(cls, fname):
+    def from_file(cls, fname, tags=None, exclude_tags=None):
+        """Create an instance and populate its summary from a JSON file."""
+
         with open(fname) as i:
             summary = json.load(i)
-        return cls(summary)
+        return cls(summary, tags, exclude_tags)
 
     @property
     def sample_count(self):
+        """The number of individual samples recorded in the current summary."""
+
         return sum(len(v.get('samples', [])) for v in self.summary.values())
 
     def save(self, fname, drop_partial=True):
+        """Save the current summary to a JSON file.
+
+        By default, only saves complete records,
+        for which reporting and consensus histories are available, and for
+        which the Ids of the analyzed samples have been recorded.
+
+        Use `drop_partial=False` to save also incomplete records.
+
+        Returns the number of samples in the saved JSON.
+        """
+
         if drop_partial:
             partial_records = set(self.get_problematic().keys())
             records_to_write = self.__class__(
@@ -46,8 +150,9 @@ class COGUKSummary():
         known_report_ids = self.get_history_ids('report')
         histories_to_search = [
             h for h in filter_objects_by_tags(
-                ['cog-uk_report'],
-                histories
+                self.tags['report'],
+                histories,
+                exclude_tags=self.exclude_tags['report']
             ) if h['id'] not in known_report_ids
         ]
         # add the links to the corresponding report histories
@@ -83,8 +188,9 @@ class COGUKSummary():
         known_consensus_ids = self.get_history_ids('consensus')
         histories_to_search = [
             h for h in filter_objects_by_tags(
-                ['cog-uk_consensus'],
-                histories
+                self.tags['consensus'],
+                histories,
+                exclude_tags=self.exclude_tags['consensus']
             ) if h['id'] not in known_consensus_ids
         ]
         # add the links to the corresponding consensus histories
@@ -105,37 +211,54 @@ class COGUKSummary():
                 partial_data[variation_from][
                     'consensus'
                 ] = gi.base_url + history['url']
-        missing_reports = [
-            k for k, v in partial_data.items() if 'report' not in v
-        ]
-        missing_consensi = [
-            k for k, v in partial_data.items() if 'consensus' not in v
-        ]
-        return len(partial_data), len(missing_reports), len(missing_consensi)
 
     def update(self, gi, histories=None):
+        """Update the current summary with analyses found on a Galaxy instance.
+
+        The Galaxy instance and user credentials are specified via a bioblend
+        galaxy instance.
+
+        Variation, reporting and consensus histories on the server will be
+        detected according to the configured `tags` and `exclude_tags`
+        dictionaries, and can be further restricted by providing a list
+        of prefetched histories.
+
+        Returns the total number of newly added records and a dictionary of
+        incomplete records in the newly added data.
+        """
+
         if not histories:
             histories = gi.histories.get_histories()
         # collect the IDs and links to variation histories processed by
         # both the report and the consensus bot
         new_data = {}
         for history in filter_objects_by_tags(
-            ['cog-uk_variation', 'report-bot-ok', 'consensus-bot-ok'],
-            histories
+            self.tags['variation'],
+            histories,
+            exclude_tags=self.exclude_tags['variation']
         ):
             if history['id'] not in self.summary:
                 new_data[history['id']] = {
                     'batch_id': history['name'].rsplit(maxsplit=1)[-1],
-                    'variation': gi.base_url + history['url']
+                    'variation': '{0}/histories/view?id={1}'.format(
+                        gi.base_url, history['id']
+                    )
                 }
         if not new_data:
             return None
 
-        ret = self._update_partial_data(gi, histories, new_data)
+        self._update_partial_data(gi, histories, new_data)
         self.summary.update(new_data)
-        return ret
+        return len(new_data), self.__class__(new_data).get_problematic()
 
     def get_history_ids(self, history_type):
+        """Get the IDs of histories contained in the summary.
+
+        `history_type` needs to be one of ['variation', 'reporting',
+        'consensus'] and determines the type of histories IDs of which will be
+        returned.
+        """
+
         ids = []
         for v in self.summary.values():
             if history_type in v:
@@ -146,6 +269,8 @@ class COGUKSummary():
         return ids
 
     def get_problematic(self):
+        """Return only incomplete records in the summary."""
+
         problematic = {}
         expected_keys = ['samples', 'report', 'consensus']
         for k, v in self.summary.items():
@@ -154,25 +279,47 @@ class COGUKSummary():
         return problematic
 
     def amend(self, gi, histories=None):
+        """Try to complete records with information found on a server.
+
+        Returns a summary of all records that are still incomplete after
+        this attempt.
+        """
+
         problematic = self.get_problematic()
         if not problematic:
             return
         if not histories:
             histories = gi.histories.get_histories()
 
-        ret = self._update_partial_data(gi, histories, problematic)
+        self._update_partial_data(gi, histories, problematic)
         self.summary.update(problematic)
-        return ret
+        return self.__class__(problematic).get_problematic()
 
-    def make_accessible(self, gi, history_type):
+    def make_accessible(self, gi, history_type=None):
+        """Make histories in the current summary accessible.
+
+        Checks all histories in the current summary that can be found on the
+        passed in Galaxy instance, and makes them accessible if they are not
+        yet.
+
+        By specifying one of ['variation', 'reporting', 'consensus'] as the
+        history_type the operation can be restricted to just one of the
+        classes of histories representing a full analysis.
+
+        Returns the count of newly made accessible histories.
+        """
         updated_count = 0
-        for history_id in self.get_history_ids(history_type):
-            if not gi.histories.show_history(history_id)['importable']:
-                gi.histories.update_history(history_id, importable=True)
-                updated_count += 1
+        if not history_type:
+            history_types = list(self.tags)
+        else:
+            history_types = [history_type]
+        for history_type in history_types:
+            for history_id in self.get_history_ids(history_type):
+                if not gi.histories.show_history(history_id)['importable']:
+                    gi.histories.update_history(history_id, importable=True)
+                    updated_count += 1
 
         return updated_count
-
 
 if __name__ == '__main__':
     import argparse
@@ -195,6 +342,23 @@ if __name__ == '__main__':
         '--retain-incomplete', action='store_true',
         help='Emit also incomplete records'
     )
+    parse_meta = parser.add_mutually_exclusive_group()
+    parse_meta.add_argument(
+        '--meta-only', action='store_true',
+        help='Do not fetch new histories from Galaxy, but only try to '
+             'complete the ENA metadata of existing records through an ENA '
+             'query.'
+    )
+    parse_meta.add_argument(
+        '--no-meta', action='store_true',
+        help='Do not perform any ENA query. '
+             'Leave ENA metadata of records untouched.'
+    )
+    parser.add_argument(
+        '--make-accessible', action='store_true',
+        help='Make all histories of all newly added analysis batches '
+             'accessible via their recorded links.'
+    )
     parser.add_argument(
         '-g', '--galaxy-url', required=True,
         help='URL of the Galaxy instance to run query against'
@@ -205,30 +369,83 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
-
-    if args.update_from_file:
+    if args.meta_only:
         s = COGUKSummary.from_file(args.update_from_file)
-        if args.fix_file:
-            s.amend(gi)
     else:
-        s = COGUKSummary()
-    new_records, missing_reports, missing_consensi = s.update(gi)
-    print('Found a total of {0} new batches.'.format(new_records))
-    if missing_reports and missing_consensi:
-        print('All of them look complete!')
-    else:
-        if missing_reports:
-            print(
-                'Report histories are missing for {0} of them.'
-                .format(missing_reports)
-            )
-        if missing_consensi:
-            print(
-                'Consensus histories are missing for {0} of them.'
-                .format(missing_reports)
-            )
+        gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
 
+        if args.update_from_file:
+            s = COGUKSummary.from_file(args.update_from_file)
+            if args.fix_file:
+                s.amend(gi)
+        else:
+            s = COGUKSummary()
+        new_records, problematic = s.update(gi)
+        print('Found a total of {0} new batches.'.format(new_records))
+        if not problematic:
+            print('All of them look complete!')
+        else:
+            missing_reports = [
+                k for k, v in problematic.items() if 'report' not in v
+            ]
+            missing_consensi = [
+                k for k, v in problematic.items() if 'consensus' not in v
+            ]
+            if missing_reports:
+                print(
+                    'Report histories are missing for {0} of them.'
+                    .format(missing_reports)
+                )
+            if missing_consensi:
+                print(
+                    'Consensus histories are missing for {0} of them.'
+                    .format(missing_reports)
+                )
+
+    if not args.no_meta:
+        batches_with_missing_meta = {
+            k for k, v in s.summary.items()
+            if 'collection_dates' not in v or '' in v['collection_dates']
+        }
+        while batches_with_missing_meta:
+            # get ENA metadata for the next batch of samples
+            # that is lacking some of it
+            k = batches_with_missing_meta.pop()
+            v = s.summary[k]
+            if ('collection_dates' not in v) or ('' in v['collection_dates']):
+                if 'collection_dates' not in v:
+                    samples_missing_meta = v['samples']
+                else:
+                    samples_missing_meta = [
+                        s for s, c in zip(
+                            v['samples'], v['collection_dates']
+                        ) if not c]
+                meta = get_ena_meta_chunk(samples_missing_meta)
+            else:
+                # This batch's metadata has meanwhile been completed
+                continue
+
+            # now iterate over all content and update what we can with
+            # the newly obtained metadata
+            for k, v in s.summary.items():
+                study_accessions = set()
+                if v.get('study_accession', '?') != '?':
+                    study_accessions.add(v['study_accession'])
+                if 'collection_dates' not in v:
+                    s.summary[k]['collection_dates'] = [''] * len(
+                        v['samples']
+                    )
+                for i, sample in enumerate(v['samples']):
+                    if sample in meta:
+                        s.summary[k]['collection_dates'][i] = meta[sample][1]
+                        study_accessions.add(meta[sample][0])
+                if len(study_accessions) == 1:
+                    s.summary[k]['study_accession'] = study_accessions.pop()
+                else:
+                    s.summary[k]['study_accession'] = '?'
+
+    if args.make_accessible:
+        s.make_accessible(gi)
     if args.retain_incomplete:
         n = s.save(args.ofile, drop_partial=False)
     else:
