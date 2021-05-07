@@ -180,7 +180,9 @@ class COGUKSummary():
                 partial_data[variation_from]['samples'] = sample_names
                 partial_data[variation_from]['time'] = by_sample_report['create_time']
                 partial_data[variation_from]['report'] = {
-                    'history_link': gi.base_url + history['url'],
+                    'history_link': '{0}/histories/view?id={1}'.format(
+                        gi.base_url, history['id']
+                    ),
                     'datamonkey_link':
                         gi.base_url + by_sample_report['url'] + '/display'
                 }
@@ -210,7 +212,9 @@ class COGUKSummary():
                     .format(partial_data[variation_from]['batch_id'])
                 partial_data[variation_from][
                     'consensus'
-                ] = gi.base_url + history['url']
+                ] = '{0}/histories/view?id={1}'.format(
+                        gi.base_url, history['id']
+                    )
 
     def update(self, gi, histories=None):
         """Update the current summary with analyses found on a Galaxy instance.
@@ -295,7 +299,7 @@ class COGUKSummary():
         self.summary.update(problematic)
         return self.__class__(problematic).get_problematic()
 
-    def make_accessible(self, gi, history_type=None):
+    def make_accessible(self, gi, history_type=None, tag=None):
         """Make histories in the current summary accessible.
 
         Checks all histories in the current summary that can be found on the
@@ -306,6 +310,7 @@ class COGUKSummary():
         history_type the operation can be restricted to just one of the
         classes of histories representing a full analysis.
 
+        Optionally, adds an extra tag to processed histories
         Returns the count of newly made accessible histories.
         """
         updated_count = 0
@@ -315,11 +320,26 @@ class COGUKSummary():
             history_types = [history_type]
         for history_type in history_types:
             for history_id in self.get_history_ids(history_type):
-                if not gi.histories.show_history(history_id)['importable']:
-                    gi.histories.update_history(history_id, importable=True)
+                history_data = gi.histories.show_history(history_id)
+                if not history_data['importable'] or (
+                    tag and tag not in history_data['tags']
+                ):
+                    if tag:
+                        new_tags = set(history_data['tags'] + [tag])
+                        gi.histories.update_history(
+                            history_id,
+                            importable=True,
+                            tags=new_tags
+                        )
+                    else:
+                        gi.histories.update_history(
+                            history_id,
+                            importable=True
+                        )
                     updated_count += 1
 
         return updated_count
+
 
 if __name__ == '__main__':
     import argparse
@@ -360,11 +380,11 @@ if __name__ == '__main__':
              'accessible via their recorded links.'
     )
     parser.add_argument(
-        '-g', '--galaxy-url', required=True,
+        '-g', '--galaxy-url',
         help='URL of the Galaxy instance to run query against'
     )
     parser.add_argument(
-        '-a', '--api-key', required=True,
+        '-a', '--api-key',
         help='API key to use for authenticating on the Galaxy server'
     )
 
@@ -445,7 +465,7 @@ if __name__ == '__main__':
                     s.summary[k]['study_accession'] = '?'
 
     if args.make_accessible:
-        s.make_accessible(gi)
+        s.make_accessible(gi, tag='bot-published')
     if args.retain_incomplete:
         n = s.save(args.ofile, drop_partial=False)
     else:
