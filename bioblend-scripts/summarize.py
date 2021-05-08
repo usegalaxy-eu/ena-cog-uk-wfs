@@ -249,7 +249,7 @@ class COGUKSummary():
                     )
                 }
         if not new_data:
-            return None
+            return 0, new_data
 
         self._update_partial_data(gi, histories, new_data)
         self.summary.update(new_data)
@@ -325,7 +325,7 @@ class COGUKSummary():
                     tag and tag not in history_data['tags']
                 ):
                     if tag:
-                        new_tags = set(history_data['tags'] + [tag])
+                        new_tags = history_data['tags'] + [tag]
                         gi.histories.update_history(
                             history_id,
                             importable=True,
@@ -401,26 +401,29 @@ if __name__ == '__main__':
         else:
             s = COGUKSummary()
         new_records, problematic = s.update(gi)
-        print('Found a total of {0} new batches.'.format(new_records))
-        if not problematic:
-            print('All of them look complete!')
+        if new_records:
+            print('Found a total of {0} new batches.'.format(new_records))
+            if not problematic:
+                print('All of them look complete!')
+            else:
+                missing_reports = [
+                    k for k, v in problematic.items() if 'report' not in v
+                ]
+                missing_consensi = [
+                    k for k, v in problematic.items() if 'consensus' not in v
+                ]
+                if missing_reports:
+                    print(
+                        'Report histories are missing for {0} of them.'
+                        .format(missing_reports)
+                    )
+                if missing_consensi:
+                    print(
+                        'Consensus histories are missing for {0} of them.'
+                        .format(missing_reports)
+                    )
         else:
-            missing_reports = [
-                k for k, v in problematic.items() if 'report' not in v
-            ]
-            missing_consensi = [
-                k for k, v in problematic.items() if 'consensus' not in v
-            ]
-            if missing_reports:
-                print(
-                    'Report histories are missing for {0} of them.'
-                    .format(missing_reports)
-                )
-            if missing_consensi:
-                print(
-                    'Consensus histories are missing for {0} of them.'
-                    .format(missing_reports)
-                )
+            print('No new batches have been found.')
 
     if not args.no_meta:
         batches_with_missing_meta = {

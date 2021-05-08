@@ -1,4 +1,4 @@
-def filter_objects_by_tags(tags, objects, exact=False, exclude_tags = None):
+def filter_objects_by_tags(tags, objects, exact=False, exclude_tags=None):
     if not tags:
         search_tags = set([None])
     else:
@@ -6,7 +6,7 @@ def filter_objects_by_tags(tags, objects, exact=False, exclude_tags = None):
     if not exclude_tags:
         exclude_tags = set()
     else:
-        exclude_tags = set(tags)
+        exclude_tags = set(exclude_tags)
     if exact:
         match = set.__eq__
     else:
@@ -20,7 +20,6 @@ def filter_objects_by_tags(tags, objects, exact=False, exclude_tags = None):
             exclude_tags
         ):
             yield obj
-
 
 def _enumerate_collection_datasets(elements):
     for element in elements:
