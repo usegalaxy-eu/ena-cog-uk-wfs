@@ -276,7 +276,7 @@ class COGUKSummary():
                     history_link = v[history_type].get('history_link')
                 if history_link:
                     if gi is None or history_link.startswith(gi.base_url):
-                        ids.append(history_link.split('/')[-1])
+                        ids.append(history_link.split('=')[-1])
         return ids
 
     def get_problematic(self):
