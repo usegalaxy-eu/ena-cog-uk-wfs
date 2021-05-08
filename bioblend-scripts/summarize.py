@@ -349,6 +349,7 @@ class COGUKSummary():
 
 if __name__ == '__main__':
     import argparse
+    import sys
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -356,34 +357,35 @@ if __name__ == '__main__':
         help='Name of the json file to generate'
     )
     parser.add_argument(
-        '-u', '--update-from-file',
-        help='Update from an existing file instead of discovering from scratch'
+        '-u', '--use-existing-file',
+        help='Preload data stored in the indicated JSON file.'
     )
     parser.add_argument(
-        '--fix-file', action='store_true',
-        help='When trying to update from a file, try to fix the file before '
-             'updating'
+        '-d', '--discover-new-data', action='store_true',
+        help='Search for new analysis batches on a Galaxy server. '
+             'Implied without -u. Requires -g and -a.'
     )
     parser.add_argument(
-        '--retain-incomplete', action='store_true',
-        help='Emit also incomplete records'
-    )
-    parse_meta = parser.add_mutually_exclusive_group()
-    parse_meta.add_argument(
-        '--meta-only', action='store_true',
-        help='Do not fetch new histories from Galaxy, but only try to '
-             'complete the ENA metadata of existing records through an ENA '
-             'query.'
-    )
-    parse_meta.add_argument(
-        '--no-meta', action='store_true',
-        help='Do not perform any ENA query. '
-             'Leave ENA metadata of records untouched.'
+        '--fix-existing', action='store_true',
+        help='Try to complete existing partial records read from file '
+             'with information found on a Galaxy server. '
+             'Requires -g and -a.'
     )
     parser.add_argument(
         '--make-accessible', action='store_true',
-        help='Make all histories of all newly added analysis batches '
-             'accessible via their recorded links.'
+        help='Make all known histories accessible via their recorded links. '
+             'Requires -g and -a and works only on histories stored on the '
+             'specified Galaxy instance.'
+    )
+    parser.add_argument(
+        '-r', '--retrieve-meta', action='store_true',
+        help='Try to fetch ENA metadata for records (old and new), which '
+             'lack it.'
+    )
+    parser.add_argument(
+        '--retain-incomplete', action='store_true',
+        help='Emit also incomplete records (for which not all analysis '
+             'histories are known)'
     )
     parser.add_argument(
         '-g', '--galaxy-url',
@@ -395,17 +397,25 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    if args.meta_only:
-        s = COGUKSummary.from_file(args.update_from_file)
+    if args.use_existing_file:
+        s = COGUKSummary.from_file(args.use_existing_file)
     else:
+        if args.fix_existing:
+            sys.exit(
+                '--fix-existing requires reading a JSON file specified via -u'
+            )
+        s = COGUKSummary()
+    if (not args.use_existing_file
+    ) or args.discover_new_data or args.make_accessible or args.fix_existing:
+        if not args.galaxy_url or not args.api_key:
+            sys.exit(
+                'Getting data from a Galaxy server requires its URL and an '
+                'API key to be specified via the -g and -a options.'
+            )
         gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
-
-        if args.update_from_file:
-            s = COGUKSummary.from_file(args.update_from_file)
-            if args.fix_file:
-                s.amend(gi)
-        else:
-            s = COGUKSummary()
+    if args.fix_existing:
+        s.amend(gi)
+    if not args.use_existing_file or args.discover_new_data:
         new_records, problematic = s.update(gi)
         if new_records:
             print('Found a total of {0} new batches.'.format(new_records))
@@ -431,11 +441,21 @@ if __name__ == '__main__':
         else:
             print('No new batches have been found.')
 
-    if not args.no_meta:
+    if args.make_accessible:
+        s.make_accessible(gi, tag='bot-published')
+
+    if args.retrieve_meta:
         batches_with_missing_meta = {
             k for k, v in s.summary.items()
             if 'collection_dates' not in v or '' in v['collection_dates']
         }
+        if len(batches_with_missing_meta) > 0:
+            print(
+                'Trying to retrieve ENA metadata for {0} analysis batches'
+                .format(len(batches_with_missing_meta))
+            )
+        else:
+            print('ENA metadata looks already complete for all records. ')
         while batches_with_missing_meta:
             # get ENA metadata for the next batch of samples
             # that is lacking some of it
@@ -473,8 +493,6 @@ if __name__ == '__main__':
                 else:
                     s.summary[k]['study_accession'] = '?'
 
-    if args.make_accessible:
-        s.make_accessible(gi, tag='bot-published')
     if args.retain_incomplete:
         n = s.save(args.ofile, drop_partial=False)
     else:
