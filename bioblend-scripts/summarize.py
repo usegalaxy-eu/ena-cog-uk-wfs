@@ -270,7 +270,7 @@ class COGUKSummary():
         ids = []
         for v in self.summary.values():
             if history_type in v:
-                if isinstance(v[history], str):
+                if isinstance(v[history_type], str):
                     history_link = v[history_type]
                 else:
                     history_link = v[history_type].get('history_link')
