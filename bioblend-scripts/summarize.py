@@ -255,21 +255,27 @@ class COGUKSummary():
         self.summary.update(new_data)
         return len(new_data), self.__class__(new_data).get_problematic()
 
-    def get_history_ids(self, history_type):
+    def get_history_ids(self, history_type, gi=None):
         """Get the IDs of histories contained in the summary.
 
         `history_type` needs to be one of ['variation', 'reporting',
         'consensus'] and determines the type of histories IDs of which will be
         returned.
+
+        If an optional bioblend galaxy instance object is specified, only
+        IDs of histories living on the corresponding Galaxy server will
+        be returned.
         """
 
         ids = []
         for v in self.summary.values():
             if history_type in v:
-                if 'history_link' in v[history_type]:
-                    ids.append(v[history_type]['history_link'].split('/')[-1])
-                else:
-                    ids.append(v[history_type].split('/')[-1])
+                history_link = v[history_type].get(
+                    'history_link',
+                    v[history_type]
+                )
+                if gi is None or history_link.startswith(gi.base_url):
+                    ids.append(history_link.split('/')[-1])
         return ids
 
     def get_problematic(self):
@@ -319,7 +325,7 @@ class COGUKSummary():
         else:
             history_types = [history_type]
         for history_type in history_types:
-            for history_id in self.get_history_ids(history_type):
+            for history_id in self.get_history_ids(history_type, gi):
                 history_data = gi.histories.show_history(history_id)
                 if not history_data['importable'] or (
                     tag and tag not in history_data['tags']
