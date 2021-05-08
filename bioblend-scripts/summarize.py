@@ -270,12 +270,13 @@ class COGUKSummary():
         ids = []
         for v in self.summary.values():
             if history_type in v:
-                history_link = v[history_type].get(
-                    'history_link',
-                    v[history_type]
-                )
-                if gi is None or history_link.startswith(gi.base_url):
-                    ids.append(history_link.split('/')[-1])
+                if isinstance(v[history], str):
+                    history_link = v[history_type]
+                else:
+                    history_link = v[history_type].get('history_link')
+                if history_link:
+                    if gi is None or history_link.startswith(gi.base_url):
+                        ids.append(history_link.split('/')[-1])
         return ids
 
     def get_problematic(self):
