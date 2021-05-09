@@ -175,18 +175,19 @@ class COGUKSummary():
             variation_from = vcf_elements[0]['object']['history_id']
 
             if variation_from in partial_data:
-                ids_with_duplicated_reports.add(variation_from)
-            else:
-                sample_names = [e['element_identifier'] for e in vcf_elements]
-                partial_data[variation_from]['samples'] = sample_names
-                partial_data[variation_from]['time'] = by_sample_report['create_time']
-                partial_data[variation_from]['report'] = {
-                    'history_link': '{0}/histories/view?id={1}'.format(
-                        gi.base_url, history['id']
-                    ),
-                    'datamonkey_link':
-                        gi.base_url + by_sample_report['url'] + '/display'
-                }
+                if 'report' in partial_data:
+                    ids_with_duplicated_reports.add(variation_from)
+                else:
+                    sample_names = [e['element_identifier'] for e in vcf_elements]
+                    partial_data[variation_from]['samples'] = sample_names
+                    partial_data[variation_from]['time'] = by_sample_report['create_time']
+                    partial_data[variation_from]['report'] = {
+                        'history_link': '{0}/histories/view?id={1}'.format(
+                            gi.base_url, history['id']
+                        ),
+                        'datamonkey_link':
+                            gi.base_url + by_sample_report['url'] + '/display'
+                    }
         if ids_with_duplicated_reports:
             print(
                 'Multiple report histories were found for the following '
@@ -225,13 +226,14 @@ class COGUKSummary():
             )['elements'][0]['object']['history_id']
 
             if variation_from in partial_data:
-                ids_with_duplicated_consensus.add(variation_from)
-            else:
-                partial_data[variation_from][
-                    'consensus'
-                ] = '{0}/histories/view?id={1}'.format(
-                        gi.base_url, history['id']
-                    )
+                if 'consensus' in partial_data:
+                    ids_with_duplicated_consensus.add(variation_from)
+                else:
+                    partial_data[variation_from][
+                        'consensus'
+                    ] = '{0}/histories/view?id={1}'.format(
+                            gi.base_url, history['id']
+                        )
         if ids_with_duplicated_consensus:
             print(
                 'Multiple consensus histories were found for the following '
