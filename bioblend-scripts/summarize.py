@@ -156,6 +156,8 @@ class COGUKSummary():
             ) if h['id'] not in known_report_ids
         ]
         # add the links to the corresponding report histories
+        # and record duplicates
+        ids_with_duplicated_reports = set()
         for history in histories_to_search:
             annotated_variants, by_sample_report = [
                 ret[0] for ret in show_matching_dataset_info(
@@ -173,9 +175,8 @@ class COGUKSummary():
             variation_from = vcf_elements[0]['object']['history_id']
 
             if variation_from in partial_data:
-                assert 'report' not in partial_data[variation_from], \
-                    'Encountered second report history for batch {0}' \
-                    .format(partial_data[variation_from]['batch_id'])
+                ids_with_duplicated_reports.add(variation_from)
+            else:
                 sample_names = [e['element_identifier'] for e in vcf_elements]
                 partial_data[variation_from]['samples'] = sample_names
                 partial_data[variation_from]['time'] = by_sample_report['create_time']
@@ -186,6 +187,21 @@ class COGUKSummary():
                     'datamonkey_link':
                         gi.base_url + by_sample_report['url'] + '/display'
                 }
+        if ids_with_duplicated_reports:
+            print(
+                'Multiple report histories were found for the following '
+                'analysis batches (please resolve the ambiguity in Galaxy and '
+                'run this command again to have the correct report info '
+                'included in the summary):'
+            )
+            print('Batch ID\tVariation History link')
+            for record in ids_with_duplicated_reports:
+                partial_data[record].pop('time')
+                partial_data[record].pop('report')
+                print('{0}\t{1}'.format(
+                    partial_data[record]['batch_id'],
+                    partial_data[record]['variation']
+                )
 
         known_consensus_ids = self.get_history_ids('consensus')
         histories_to_search = [
@@ -196,6 +212,8 @@ class COGUKSummary():
             ) if h['id'] not in known_consensus_ids
         ]
         # add the links to the corresponding consensus histories
+        # and record duplicates
+        ids_with_duplicated_consensus = set()
         for history in histories_to_search:
             variation_from = gi.histories.show_dataset_collection(
                 history['id'],
@@ -207,14 +225,27 @@ class COGUKSummary():
             )['elements'][0]['object']['history_id']
 
             if variation_from in partial_data:
-                assert 'consensus' not in partial_data[variation_from], \
-                    'Encountered second consensus history for batch {0}' \
-                    .format(partial_data[variation_from]['batch_id'])
+                ids_with_duplicated_consensus.add(variation_from)
+            else:
                 partial_data[variation_from][
                     'consensus'
                 ] = '{0}/histories/view?id={1}'.format(
                         gi.base_url, history['id']
                     )
+        if ids_with_duplicated_consensus:
+            print(
+                'Multiple consensus histories were found for the following '
+                'analysis batches (please resolve the ambiguity in Galaxy and '
+                'run this command again to have the correct consensus info '
+                'included in the summary):'
+            )
+            print('Batch ID\tVariation History link')
+            for record in ids_with_duplicated_consensus:
+                partial_data[record].pop('consensus')
+                print('{0}\t{1}'.format(
+                    partial_data[record]['batch_id'],
+                    partial_data[record]['variation']
+                )
 
     def update(self, gi, histories=None):
         """Update the current summary with analyses found on a Galaxy instance.
