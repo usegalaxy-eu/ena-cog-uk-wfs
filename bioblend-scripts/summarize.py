@@ -201,7 +201,7 @@ class COGUKSummary():
                 print('{0}\t{1}'.format(
                     partial_data[record]['batch_id'],
                     partial_data[record]['variation']
-                )
+                ))
 
         known_consensus_ids = self.get_history_ids('consensus')
         histories_to_search = [
@@ -245,7 +245,7 @@ class COGUKSummary():
                 print('{0}\t{1}'.format(
                     partial_data[record]['batch_id'],
                     partial_data[record]['variation']
-                )
+                ))
 
     def update(self, gi, histories=None):
         """Update the current summary with analyses found on a Galaxy instance.
