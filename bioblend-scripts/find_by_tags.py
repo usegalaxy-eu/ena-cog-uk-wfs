@@ -1,14 +1,25 @@
-def filter_objects_by_tags(tags, objects):
+def filter_objects_by_tags(tags, objects, exact=False, exclude_tags=None):
     if not tags:
         search_tags = set([None])
     else:
         search_tags = set(tags)
+    if not exclude_tags:
+        exclude_tags = set()
+    else:
+        exclude_tags = set(exclude_tags)
+    if exact:
+        match = set.__eq__
+    else:
+        match = set.issubset
 
     for obj in objects:
         object_tags = set(obj['tags']) or set([None])
-        if search_tags.issubset(object_tags):
+        if match(
+            search_tags, object_tags
+        ) and object_tags.isdisjoint(
+            exclude_tags
+        ):
             yield obj
-
 
 def _enumerate_collection_datasets(elements):
     for element in elements:
