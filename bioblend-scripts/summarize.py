@@ -380,9 +380,19 @@ class COGUKSummary():
 
         return updated_count
 
+    def __sub__(self, other):
+        """Return the parts of the first summary that are absent from or
+        different in the second summary.
+        """
+        new = {
+            k: v for k, v in self.summary.items()
+            if k not in other.summary or other.summary[k] != v
+        }
+        return self.__class__(new)
 
 if __name__ == '__main__':
     import argparse
+    import os
     import sys
 
     parser = argparse.ArgumentParser()
@@ -391,8 +401,14 @@ if __name__ == '__main__':
         help='Name of the json file to generate'
     )
     parser.add_argument(
-        '-u', '--use-existing-file',
-        help='Preload data stored in the indicated JSON file.'
+        '-u', '--use-existing-file', nargs='+',
+        help='Preload data stored in the indicated JSON file(s).'
+    )
+    parser.add_argument(
+        '--fix-existing', action='store_true',
+        help='Try to complete existing partial records read from file '
+             'with information found on a Galaxy server. '
+             'Requires -g and -a.'
     )
     parser.add_argument(
         '-d', '--discover-new-data', action='store_true',
@@ -400,10 +416,8 @@ if __name__ == '__main__':
              'Implied without -u. Requires -g and -a.'
     )
     parser.add_argument(
-        '--fix-existing', action='store_true',
-        help='Try to complete existing partial records read from file '
-             'with information found on a Galaxy server. '
-             'Requires -g and -a.'
+        '--write-new-only', action='store_true',
+        help='Write only newly discovered data. Requires -d.'
     )
     parser.add_argument(
         '--make-accessible', action='store_true',
@@ -422,6 +436,18 @@ if __name__ == '__main__':
              'histories are known)'
     )
     parser.add_argument(
+        '--check-data-availability', action='store_true',
+        help='Check that data pointed to by Galaxy download links '
+             'is actually available by performing the downloads of '
+             'the files. Records with failing downloads will not be '
+             'written to the JSON output.'
+    )
+    parser.add_argument(
+        '--data-download-dir',
+        help='The path to the folder the data downloads triggered '
+             'by --check-data-availability should be saved to.'
+    )
+    parser.add_argument(
         '-g', '--galaxy-url',
         help='URL of the Galaxy instance to run query against'
     )
@@ -431,16 +457,23 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    if args.use_existing_file:
-        s = COGUKSummary.from_file(args.use_existing_file)
-    else:
+    s = COGUKSummary()
+
+    if not args.use_existing_file:
         if args.fix_existing:
             sys.exit(
                 '--fix-existing requires reading a JSON file specified via -u'
             )
-        s = COGUKSummary()
+    else:
+        for f in args.use_existing_file:
+            s.summary.update(
+                COGUKSummary.from_file(f).summary
+            )
+
     if (not args.use_existing_file
-    ) or args.discover_new_data or args.make_accessible or args.fix_existing:
+    ) or (args.discover_new_data
+    ) or (args.make_accessible
+    ) or args.fix_existing or args.check_data_availability:
         if not args.galaxy_url or not args.api_key:
             sys.exit(
                 'Getting data from a Galaxy server requires its URL and an '
@@ -448,8 +481,17 @@ if __name__ == '__main__':
             )
         gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
     if args.fix_existing:
+        if args.write_new_only:
+            sys.exit(
+                '--fix-existing cannot meaningfully be combined '
+                'with --write-new-only'
+            )
         s.amend(gi)
     if not args.use_existing_file or args.discover_new_data:
+        if args.write_new_only:
+            old_summary = COGUKSummary(
+                {k:v for k, v in s.summary.items()}
+            )
         new_records, problematic = s.update(gi)
         if new_records:
             print('Found a total of {0} new batches.'.format(new_records))
@@ -474,7 +516,37 @@ if __name__ == '__main__':
                     )
         else:
             print('No new batches have been found.')
+    elif args.write_new_only:
+        sys.exit('--write-new-only works only in combination with -d')
 
+    if args.write_new_only:
+        s = s - old_summary
+
+    if args.check_data_availability:
+        checked_summary = {}
+        # currently the only thing checked are the datamonkey links
+        for k, v in s.summary.items():
+            if 'report' not in v or 'datamonkey_link' not in v['report']:
+                continue
+            dataset_id = v['report']['datamonkey_link'].split('/')[-2]
+            try:
+                gi.datasets.download_dataset(
+                    dataset_id,
+                    file_path=os.path.join(
+                        args.data_download_dir,
+                        k + '_variants_by_sample.tsv'
+                    ),
+                    use_default_filename=False,
+                    maxwait=0
+                )
+            except galaxy.datasets.DatasetStateException:
+                print(
+                    'Failed to verify datamonkey link for batch:',
+                    v['batch_id']
+                )
+                continue
+            checked_summary[k] = v
+        s = COGUKSummary(checked_summary)
     if args.make_accessible:
         s.make_accessible(gi, tag='bot-published')
 
