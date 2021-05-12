@@ -12,15 +12,6 @@ from find_datasets import show_matching_dataset_info
 from find_by_tags import filter_objects_by_tags
 
 
-def find_longest_common_prefix(words):
-    prefix = []
-    for letters in zip(*words):
-        if len(set(letters)) > 1:
-            break
-        prefix.append(letters[0])
-    return ''.join(prefix)
-
-
 def get_ena_meta_chunk(samples):
     not_found = set(samples)
     ret = {}
@@ -448,6 +439,11 @@ if __name__ == '__main__':
              'by --check-data-availability should be saved to.'
     )
     parser.add_argument(
+        '-s', '--study-accession',
+        help='Work only on the subset of records with "study_accession" '
+             'equal this value'
+    )
+    parser.add_argument(
         '-g', '--galaxy-url',
         help='URL of the Galaxy instance to run query against'
     )
@@ -488,6 +484,12 @@ if __name__ == '__main__':
             )
         s.amend(gi)
     if not args.use_existing_file or args.discover_new_data:
+        if args.study_accession:
+            sys.exit(
+                'Cannot combine --study-accession with new data discovery. '
+                'Metadata for filtering would not be available for newly '
+                'added data.'
+            )
         if args.write_new_only:
             old_summary = COGUKSummary(
                 {k:v for k, v in s.summary.items()}
@@ -522,6 +524,13 @@ if __name__ == '__main__':
     if args.write_new_only:
         s = s - old_summary
 
+    if args.study_accession:
+        s = COGUKSummary(
+            {
+                k: v for k,v in s.summary.items()
+                if v['study_accession'] == args.study_accession
+            }
+        )
     if args.check_data_availability:
         checked_summary = {}
         # currently the only thing checked are the datamonkey links
