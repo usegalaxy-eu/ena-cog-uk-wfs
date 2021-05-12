@@ -535,7 +535,12 @@ if __name__ == '__main__':
         checked_summary = {}
         # currently the only thing checked are the datamonkey links
         for k, v in s.summary.items():
+            # skip incomplete records without proper report info
+            # and records that are not available from the current
+            # Galaxy instance
             if 'report' not in v or 'datamonkey_link' not in v['report']:
+                continue
+            if not v['report']['history_link'].startswith(gi.base_url):
                 continue
             dataset_id = v['report']['datamonkey_link'].split('/')[-2]
             try:
@@ -550,10 +555,16 @@ if __name__ == '__main__':
                 )
             except galaxy.datasets.DatasetStateException:
                 print(
-                    'Failed to verify datamonkey link for batch:',
-                    v['batch_id']
+                    'Failed to verify datamonkey link for:',
+                    v['report']['history_link']
                 )
                 continue
+            except galaxy.histories.ConnectionError:
+                print(
+                    'Problem retrieving by_sample variant report for:',
+                    v['report']['history_link']
+                )
+                raise
             checked_summary[k] = v
         s = COGUKSummary(checked_summary)
     if args.make_accessible:
