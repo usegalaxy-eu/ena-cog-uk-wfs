@@ -132,7 +132,7 @@ if __name__ == '__main__':
                 # write Poisson stats for this file
                 # convert position=>hits into hits=># of positions
                 N = len(samples)
-                diag_row = [entry.path, str(N), 'N/A', 'N/A']
+                diag_row = [entry.name.split('_')[0], str(N), 'N/A', 'N/A']
                 if N >= 10:
                     max_hits = max(
                         hit_count.items(),
@@ -165,8 +165,12 @@ if __name__ == '__main__':
                     #print(hit_array, file=sys.stderr)
 
                     print(
-                        'Batch ID %s: Poisson cutoff %d, error rate %g'
-                        % (entry.path, cutoff, ml_lambda / genome_length),
+                        'ID %s: Poisson cutoff %d, error rate %g'
+                        % (
+                          entry.name.split('_')[0],
+                          cutoff,
+                          ml_lambda / genome_length
+                        ),
                         file=sys.stderr
                     )
 
