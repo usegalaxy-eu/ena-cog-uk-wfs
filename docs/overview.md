@@ -3,7 +3,7 @@
 ## A collection of scripts for SARS-CoV-2 genomics analysis automation
 
 Our automation solution comes in the form of a collection of independent small
-scripts powered by the [bioblend](https://github.com/galaxyproject/bioblend)
+scripts powered by the [BioBlend](https://github.com/galaxyproject/bioblend)
 library for interacting with the Galaxy API and by the
 [workflow execution functionality](https://planemo.readthedocs.io/en/latest/running.html#workflow-execution-against-an-external-galaxy)
 of the [planemo](https://github.com/galaxyproject/planemo) command-line
