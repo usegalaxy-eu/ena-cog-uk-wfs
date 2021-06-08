@@ -38,7 +38,7 @@ def parse_compressed(in_json):
 
 if __name__ == '__main__':
     arguments = argparse.ArgumentParser(
-        description='Read a TSV file and compress in into a JSON with indexed '
+        description='Read a TSV file and compress it into a JSON with indexed '
                     'key storage. This assumes a sufficient degree of field '
                     'value repetitions.'
         )
