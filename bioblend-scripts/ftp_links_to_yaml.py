@@ -22,11 +22,19 @@ def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
         for link in ena_links:
             if ena_links_states[link] in NON_OK_TERMINAL_STATES:
                 if ena_links_attempts_left[link] > 0:
-                    ena_links_dataset_ids[link] = gi.tools.put_url(
-                        content=link,
-                        history_id=history_id,
-                        file_type='fastqsanger.gz',
-                    )['outputs'][0]['id']
+                    if link[:8] == 'gxftp://':
+                        # retrieve this dataset from user's FTP dir
+                        ena_links_dataset_ids[link] = gi.tools.upload_from_ftp(
+                            path=link[8:],
+                            history_id=history_id,
+                            file_type='fastqsanger.gz',
+                        )['outputs'][0]['id']
+                    else:
+                        ena_links_dataset_ids[link] = gi.tools.put_url(
+                            content=link,
+                            history_id=history_id,
+                            file_type='fastqsanger.gz',
+                        )['outputs'][0]['id']
                     ena_links_attempts_left[link] -= 1
                 else:
                     raise ConnectionError(
