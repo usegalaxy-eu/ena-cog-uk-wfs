@@ -57,7 +57,14 @@ def parse_ena_fastq_ftp_links(ena_links, link_record_mapping=None):
     if link_record_mapping is None:
         link_record_mapping = {}
     records = {}
-    pe_indicator_mapping = {'1': 'forward', '2': 'reverse'}
+    pe_indicator_mapping = {
+        '1': 'forward',
+        '2': 'reverse',
+        'R1': 'forward',
+        'R2': 'reverse',
+        'r1': 'forward',
+        'r2': 'reverse'
+    }
     is_pe_data = None
     for link, dataset_id in ena_links.items():
         path, file = link.rsplit('/', maxsplit=1)
@@ -65,16 +72,17 @@ def parse_ena_fastq_ftp_links(ena_links, link_record_mapping=None):
         if is_pe_data is None:
             # Use the first link to decide wether we are dealing with
             # SE or PE data links.
-            # If the preparsed ENA ID ends in '_1' or '_2' the links are
-            # for PE data. Anything else is treated as SE data links.
+            # If the preparsed ENA ID ends in '_[rR]?1' or '_[rR]?2',
+            # the links are for PE data.
+            # Anything else is treated as SE data links.
             try:
-                a, b = file_base.rsplit('_')
+                a, sep, b = file_base.rpartition('_')
                 pe_indicator = pe_indicator_mapping[b]
                 is_pe_data = True
             except (ValueError, KeyError):
                 is_pe_data = False
         if is_pe_data:
-            file_base, pe_indicator = file_base.split('_')
+            file_base, sep, pe_indicator = file_base.rpartition('_')
             record_id = link_record_mapping.get(link, file_base)
             if record_id not in records:
                 records[record_id] = {}
