@@ -259,7 +259,7 @@ if __name__ == '__main__':
     links = []
     link_record_mapping = {}
     for data_spec in data_specs:
-        record_id, sep, link = [d.strip() for d in data_spec.rpartition(':')]
+        record_id, sep, link = [d.strip() for d in data_spec.rpartition(': ')]
         if '://' not in link:
             link = f'{args.protocol}://{link}'
         links.append(link)
