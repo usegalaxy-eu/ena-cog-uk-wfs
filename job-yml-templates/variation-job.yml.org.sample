@@ -1,8 +1,8 @@
 #use_server: https://usegalaxy.org
-#list_pe_workflow_id: 0c8d41fc77bee088
+#list_pe_workflow_id: f201a6928b92f593
 #nested_list_workflow_id: n.a.
 #new_history_base_name: COG-UK
-#new_history_tag: cog-uk_variation
+#new_history_tag: cog-uk_variation_v3
 #history_for_downloads: 2833f6e83aa8f9f2
 #metadata_history_tag: bot-upload-meta
 #metadata_collection_name: Links to upload
