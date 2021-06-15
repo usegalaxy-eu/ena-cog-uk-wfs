@@ -388,7 +388,11 @@ class COGUKSummary():
         history_type the operation can be restricted to just one of the
         classes of histories representing a full analysis.
 
-        Optionally, adds an extra tag to processed histories
+        By specifying a history tag, the operation will be restricted to
+        histories that do not yet carry that tag, and the tag will be added
+        to such histories during the operation.
+        Note that using a history tag speeds up the method dramatically.
+
         Returns the count of newly made accessible histories.
         """
         updated_count = 0
@@ -396,26 +400,28 @@ class COGUKSummary():
             history_types = list(self.tags)
         else:
             history_types = [history_type]
+        histories_to_check = set()
         for history_type in history_types:
-            for history_id in self.get_history_ids(history_type, gi):
-                history_data = gi.histories.show_history(history_id)
-                if not history_data['importable'] or (
-                    tag and tag not in history_data['tags']
-                ):
-                    if tag:
-                        new_tags = history_data['tags'] + [tag]
-                        gi.histories.update_history(
-                            history_id,
-                            importable=True,
-                            tags=new_tags
-                        )
-                    else:
+            histories_to_check.update(self.get_history_ids(history_type, gi))
+
+        for h in gi.histories.get_histories():
+            if h['id'] in histories_to_check:
+                if not tag:
+                    history_data = gi.histories.show_history(h['id'])
+                    if not history_data['importable']:
                         gi.histories.update_history(
                             history_id,
                             importable=True
                         )
+                        updated_count += 1
+                elif tag not in h['tags']:
+                    new_tags = history_data['tags'] + [tag]
+                    gi.histories.update_history(
+                        history_id,
+                        importable=True,
+                        tags=new_tags
+                    )
                     updated_count += 1
-
         return updated_count
 
     def __sub__(self, other):
