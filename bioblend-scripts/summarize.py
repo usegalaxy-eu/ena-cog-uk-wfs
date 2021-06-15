@@ -410,14 +410,14 @@ class COGUKSummary():
                     history_data = gi.histories.show_history(h['id'])
                     if not history_data['importable']:
                         gi.histories.update_history(
-                            history_id,
+                            h['id'],
                             importable=True
                         )
                         updated_count += 1
                 elif tag not in h['tags']:
-                    new_tags = history_data['tags'] + [tag]
+                    new_tags = h['tags'] + [tag]
                     gi.histories.update_history(
-                        history_id,
+                        h['id'],
                         importable=True,
                         tags=new_tags
                     )
