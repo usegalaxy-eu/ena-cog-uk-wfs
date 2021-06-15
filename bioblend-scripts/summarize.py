@@ -12,6 +12,39 @@ from find_datasets import show_matching_dataset_info
 from find_by_tags import filter_objects_by_tags
 
 
+def resolve_ena_record_duplicates(record_id, record_meta_lines):
+    # metadata gets passed in as a list of (study, coll_date, erc) tuples
+    print('More than one ENA record found for ID "{0}".'.format(record_id))
+
+    study_accessions = set(m[0] for m in record_meta_lines)
+
+    if len(study_accessions) > 1:
+        raise AssertionError(
+            'Duplicate records specify conflicting Study Accessions '
+            '({0}) -> Aborting!'
+            .format(study_accessions)
+        )
+
+    meta_matching = (
+        [m for m in record_meta_lines if m[2] == 'ERC000033']
+        or [m for m in record_meta_lines if m[2] != '']
+        or record_meta_lines
+    )
+
+    coll_dates = set(m[1] for m in meta_matching)
+    if len(coll_dates) > 1:
+        AssertionError(
+            'Multiple possible Collection Dates ({0}) for accession number {1}'
+            ' -> Aborting!'
+            .format(coll_dates, record_id)
+        )
+    print(
+        'Metadata for accession number {0} resolved to {1}'
+        .format(record_id, meta_matching[0])
+    )
+    return meta_matching[0]
+
+
 def get_ena_meta_chunk(samples):
     not_found = set(samples)
     ret = {}
@@ -19,35 +52,49 @@ def get_ena_meta_chunk(samples):
         if sample in not_found:
             ena_accession_wildcard = sample[:-2] + '*'
 
+            if sample[1:3] == 'RR':
+                accession_field = 'run_accession'
+            elif sample[1:3] == 'RX':
+                accession_field = 'experiment_accession'
+            else:
+                raise AssertionError(
+                    'Unknown accession format: "{0}"'.format(sample)
+                )
             with open('ena_answer.txt', 'w') as o:
                 subprocess.run(
                     [
                         'curl', '-X', 'POST', '-H',
                         'Content-Type: application/x-www-form-urlencoded',
                         '-d',
-                        'result=read_run&query=experiment_accession="{0}"%20OR%20run_accession="{0}"'
-                        '&fields=collection_date%2Cexperiment_accession%2Crun_accession%2Cstudy_accession'
+                        'result=read_run&query={0}="{1}"'
+                        '&fields=collection_date%2C{0}%2Cstudy_accession%2Cchecklist'
                         '&limit=0&format=tsv'
-                        .format(ena_accession_wildcard),
+                        .format(accession_field, ena_accession_wildcard),
                         'https://www.ebi.ac.uk/ena/portal/api/search'
                     ],
                     stdout=o
                 )
             with open('ena_answer.txt') as i:
                 _ = i.readline() # throw away header line
+                newly_found = {}
                 for line in i:
-                    _, coll_date, exp, err, study = line.strip().split('\t')
-                    if exp == sample:
-                        # special case for e.g. Estonian data
-                        ret[exp] = (study, coll_date)
-                        if exp in not_found:
-                            not_found.remove(exp)
-                    else:
-                        ret[err] = (study, coll_date)
-                        if err in not_found:
-                            not_found.remove(err)
+                    _, coll_date, accession, study, erc = line.strip('\n\r').split('\t')
+                    if accession in not_found:
+                        if accession not in newly_found:
+                            newly_found[accession] = [(study, coll_date, erc)]
+                        else:
+                            newly_found[accession].append((study, coll_date, erc))
+            for accession in newly_found:
+                if len(newly_found[accession]) == 1:
+                    ret[accession] = newly_found[accession][0]
+                else:
+                    ret[accession] = resolve_ena_record_duplicates(
+                        accession, newly_found[accession]
+                    )
+                not_found.remove(accession)
 
     return ret
+
 
 class COGUKSummary():
     """Represent a bot analysis summary.
@@ -341,7 +388,11 @@ class COGUKSummary():
         history_type the operation can be restricted to just one of the
         classes of histories representing a full analysis.
 
-        Optionally, adds an extra tag to processed histories
+        By specifying a history tag, the operation will be restricted to
+        histories that do not yet carry that tag, and the tag will be added
+        to such histories during the operation.
+        Note that using a history tag speeds up the method dramatically.
+
         Returns the count of newly made accessible histories.
         """
         updated_count = 0
@@ -349,26 +400,28 @@ class COGUKSummary():
             history_types = list(self.tags)
         else:
             history_types = [history_type]
+        histories_to_check = set()
         for history_type in history_types:
-            for history_id in self.get_history_ids(history_type, gi):
-                history_data = gi.histories.show_history(history_id)
-                if not history_data['importable'] or (
-                    tag and tag not in history_data['tags']
-                ):
-                    if tag:
-                        new_tags = history_data['tags'] + [tag]
+            histories_to_check.update(self.get_history_ids(history_type, gi))
+
+        for h in gi.histories.get_histories():
+            if h['id'] in histories_to_check:
+                if not tag:
+                    history_data = gi.histories.show_history(h['id'])
+                    if not history_data['importable']:
                         gi.histories.update_history(
-                            history_id,
-                            importable=True,
-                            tags=new_tags
-                        )
-                    else:
-                        gi.histories.update_history(
-                            history_id,
+                            h['id'],
                             importable=True
                         )
+                        updated_count += 1
+                elif tag not in h['tags']:
+                    new_tags = h['tags'] + [tag]
+                    gi.histories.update_history(
+                        h['id'],
+                        importable=True,
+                        tags=new_tags
+                    )
                     updated_count += 1
-
         return updated_count
 
     def __sub__(self, other):
