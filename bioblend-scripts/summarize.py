@@ -503,6 +503,10 @@ if __name__ == '__main__':
              'equal this value'
     )
     parser.add_argument(
+        '--format-tabular', action='store_true',
+        help='Write a tabular per-sample report instead of JSON'
+    )
+    parser.add_argument(
         '-g', '--galaxy-url',
         help='URL of the Galaxy instance to run query against'
     )
@@ -680,8 +684,49 @@ if __name__ == '__main__':
                 else:
                     s.summary[k]['study_accession'] = '?'
 
-    if args.retain_incomplete:
-        n = s.save(args.ofile, drop_partial=False)
+    if args.format_tabular:
+        if not args.retain_incomplete:
+            partial_records = set(s.get_problematic().keys())
+            s = s.__class__(
+                {
+                    k: v for k, v in s.summary.items()
+                    if k not in partial_records
+                }
+            )
+        with open(args.ofile, 'w') as o:
+            print(
+                'run_accession',
+                'collection_date',
+                'completed_date',
+                'study_accession',
+                'batch_id',
+                sep='\t',
+                file=o
+            )
+
+            for v in s.summary.values():
+                if 'samples' not in v:
+                    continue
+                coll_dates = v.get(
+                    'collection_dates',
+                    [''] *len(v['samples'])
+                )
+                comp_date = v.get('time', '').split('T')[0]
+                study_acc = v.get('study_accession', '')
+
+                for sample, coll_date in zip(v['samples'], coll_dates):
+                    print(
+                        sample,
+                        coll_date,
+                        comp_date,
+                        study_acc,
+                        v['batch_id'],
+                        sep='\t',
+                        file=o
+                    )
     else:
-        n = s.save(args.ofile)
-    print('Saved metadata for {0} samples'.format(n))
+        if args.retain_incomplete:
+            n = s.save(args.ofile, drop_partial=False)
+        else:
+            n = s.save(args.ofile)
+        print('Saved metadata for {0} samples'.format(n))
