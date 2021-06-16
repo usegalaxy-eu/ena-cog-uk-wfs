@@ -581,7 +581,7 @@ if __name__ == '__main__':
         s = COGUKSummary(
             {
                 k: v for k,v in s.summary.items()
-                if v['study_accession'] == args.study_accession
+                if v.get('study_accession') == args.study_accession
             }
         )
     if args.check_data_availability:
