@@ -197,20 +197,22 @@ class COGUKSummary():
         # and record duplicates
         ids_with_duplicated_reports = set()
         for history in histories_to_search:
-            annotated_variants, by_sample_report = [
-                ret[0] for ret in show_matching_dataset_info(
-                    gi, history['id'],
-                    [
-                        'Final (SnpEff-) annotated variants',
-                        'Combined Variant Report by Sample'
-                    ],
-                    visible=True
-                )
-            ]
+            annotated_vars_info, by_sample_info = show_matching_dataset_info(
+                gi, history['id'],
+                [
+                    'Final (SnpEff-) annotated variants',
+                    'Combined Variant Report by Sample'
+                ],
+                visible=True
+            )
+            if not annotated_vars_info or not by_sample_info:
+                continue
+
             vcf_elements = gi.histories.show_dataset_collection(
-                history['id'], annotated_variants['id']
+                history['id'], annotated_vars_info[0]['id']
             )['elements']
             variation_from = vcf_elements[0]['object']['history_id']
+            by_sample_report = by_sample_info[0]
 
             if variation_from in partial_data:
                 if 'report' in partial_data:
@@ -254,13 +256,17 @@ class COGUKSummary():
         # and record duplicates
         ids_with_duplicated_consensus = set()
         for history in histories_to_search:
+            annotated_vars_info = show_matching_dataset_info(
+                gi, history['id'],
+                ['Final (SnpEff-) annotated variants'],
+                types='dataset_collection'
+            )[0]
+            if not annotated_vars_info:
+                continue
+
             variation_from = gi.histories.show_dataset_collection(
                 history['id'],
-                show_matching_dataset_info(
-                    gi, history['id'],
-                    ['Final (SnpEff-) annotated variants'],
-                    types='dataset_collection'
-                )[0][0]['id']
+                annotated_vars_info[0]['id']
             )['elements'][0]['object']['history_id']
 
             if variation_from in partial_data:
@@ -554,20 +560,22 @@ if __name__ == '__main__':
                 print('All of them look complete!')
             else:
                 missing_reports = [
-                    k for k, v in problematic.items() if 'report' not in v
+                    v['batch_id']
+                    for v in problematic.values() if 'report' not in v
                 ]
                 missing_consensi = [
-                    k for k, v in problematic.items() if 'consensus' not in v
+                    v['batch_id']
+                    for v in problematic.values() if 'consensus' not in v
                 ]
                 if missing_reports:
                     print(
-                        'Report histories are missing for {0} of them.'
-                        .format(missing_reports)
+                        'Report histories are missing for {0} of them:\n{1}'
+                        .format(len(missing_reports), missing_reports)
                     )
                 if missing_consensi:
                     print(
-                        'Consensus histories are missing for {0} of them.'
-                        .format(missing_reports)
+                        'Consensus histories are missing for {0} of them.\n{1}'
+                        .format(len(missing_consensi), missing_consensi)
                     )
         else:
             print('No new batches have been found.')
