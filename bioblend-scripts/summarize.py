@@ -608,6 +608,14 @@ if __name__ == '__main__':
             if not v['report']['history_link'].startswith(gi.base_url):
                 continue
             dataset_id = v['report']['datamonkey_link'].split('/')[-2]
+            dataset_info = gi.datasets.show_dataset(dataset_id)
+            if dataset_info['state'] != 'ok':
+                print(
+                    'Skipping by_sample report not ready for downloading:',
+                    v['report']['history_link'],
+                    '(state: "{0}")'.format(dataset_info['state'])
+                )
+                continue
             try:
                 gi.datasets.download_dataset(
                     dataset_id,
