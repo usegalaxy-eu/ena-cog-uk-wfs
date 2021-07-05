@@ -9,33 +9,42 @@ import yaml
 
 from bioblend import galaxy
 
+
 NON_OK_TERMINAL_STATES = {
     'empty', 'error', 'discarded', 'failed_metadata', 'paused'
 }
 
-def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
-    ena_links_dataset_ids = {}
-    ena_links_states = {link: 'empty' for link in ena_links}
-    ena_links_attempts_left = {link: upload_attempts for link in ena_links}
+
+def upload_from_links(links, gi, history_id, upload_attempts, timeout):
+    timeout_secs = timeout * 60
+    links_dataset_ids = {}
+    links_states = {}
+    for link in links:
+        links_states[link] = {
+            'status': 'empty',
+            'attempts_left': upload_attempts
+        }
 
     while True:
-        for link in ena_links:
-            if ena_links_states[link] in NON_OK_TERMINAL_STATES:
-                if ena_links_attempts_left[link] > 0:
+        for link in links:
+            if links_states[link]['status'] in NON_OK_TERMINAL_STATES:
+                if links_states[link]['attempts_left'] > 0:
                     if link[:8] == 'gxftp://':
                         # retrieve this dataset from user's FTP dir
-                        ena_links_dataset_ids[link] = gi.tools.upload_from_ftp(
+                        r = gi.tools.upload_from_ftp(
                             path=link[8:],
                             history_id=history_id,
                             file_type='fastqsanger.gz',
-                        )['outputs'][0]['id']
+                        )
                     else:
-                        ena_links_dataset_ids[link] = gi.tools.put_url(
+                        r = gi.tools.put_url(
                             content=link,
                             history_id=history_id,
                             file_type='fastqsanger.gz',
-                        )['outputs'][0]['id']
-                    ena_links_attempts_left[link] -= 1
+                        )
+                    links_dataset_ids[link] = r['outputs'][0]['id']
+                    links_states[link]['job_id'] = r['jobs'][0]['id']
+                    links_states[link]['attempts_left'] -= 1
                 else:
                     raise ConnectionError(
                         'Some datasets did not upload successfully after the '
@@ -44,13 +53,33 @@ def upload_from_ena_links(ena_links, gi, history_id, upload_attempts):
 
         time.sleep(60)
 
-        for link in ena_links:
-            if ena_links_states[link] != 'ok':
-                ena_links_states[link] = gi.datasets.show_dataset(
-                    ena_links_dataset_ids[link]
+        # update states of pending datasets and check if all complete
+        all_ok = True
+        for link in links:
+            if links_states[link]['status'] != 'ok':
+                links_states[link]['status'] = gi.datasets.show_dataset(
+                    links_dataset_ids[link]
                 )['state']
-        if set(ena_links_states.values()) == {'ok'}:
-            return ena_links_dataset_ids
+                if links_states[link]['status'] != 'ok':
+                    all_ok = False
+                    if links_states[link]['status'] == 'running':
+                        if 'running_since' not in links_states[link]:
+                            links_states[link]['running_since'] = int(
+                                time.time()
+                            )
+                        elif (
+                            int(time.time())
+                            - links_states[link]['running_since']
+                        ) >= timeout_secs:
+                            # upload of this dataset took longer than the
+                            # specified timeout
+                            # => cancel the upload job and flag the link as
+                            # requiring a new upload attempt
+                            gi.jobs.cancel_job(links_states[link]['job_id'])
+                            links_states[link]['status'] = 'empty'
+                            links_states[link].pop('running_since')
+        if all_ok:
+            return links_dataset_ids
 
 
 def parse_ena_fastq_ftp_links(ena_links, link_record_mapping=None):
@@ -245,7 +274,7 @@ if __name__ == '__main__':
         help='Write output to this file instead of to standard output'
     )
     parser.add_argument(
-        '-i', '--history_id',
+        '-i', '--history-id',
         help='History ID for uploading datasets'
     )
     parser.add_argument(
@@ -253,9 +282,17 @@ if __name__ == '__main__':
         help='Default transfer protocol'
     )
     parser.add_argument(
-        '-u', '--upload_attempts', type=int, default=20,
+        '-u', '--upload-attempts', type=int, default=20,
         help='Number of retry attempts for dataset upload failures',
     )
+    parser.add_argument(
+        '-t', '--upload-timeout', type=int, default=60,
+        help='Time in minutes to wait for running dataset upload jobs to '
+             'finish. '
+             'If an upload has not completed after this time, the job will '
+             'be canceled and a new upload attempt be triggered.',
+    )
+
     args = parser.parse_args()
 
     gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
@@ -276,8 +313,9 @@ if __name__ == '__main__':
 
     yaml = records_to_yaml(
         parse_ena_fastq_ftp_links(
-            upload_from_ena_links(
-                links, gi, args.history_id, args.upload_attempts
+            upload_from_links(
+                links, gi, args.history_id,
+                args.upload_attempts, args.upload_timeout
             ), link_record_mapping
         ),
         args.collection_name
