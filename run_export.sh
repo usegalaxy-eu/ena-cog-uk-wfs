@@ -29,7 +29,7 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     SOURCE_HISTORY_NAME=$(grep '#from_history_name:' "$WORKDIR/$JOB_YML" | cut -d ' ' -f 2-)
     # wait for successful completion of workflow scheduling by planemo run,
     # then update the status tag of the source history
-    (while [ ! -s "$WORKDIR/run_info.txt" ]; do sleep 60; done; DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) && python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_STATUS2 -r $BOT_STATUS1) &
+    (while [ ! -s "$WORKDIR/run_info.txt" ]; do sleep 60; done && python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_STATUS2 -r $BOT_STATUS1) &
     # prevent reprocessing of the same history by removing its bot-specific tag
     # replace it with a status tag instead
     python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_STATUS1 -r $BOT_TAG
