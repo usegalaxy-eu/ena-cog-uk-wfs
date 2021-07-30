@@ -305,11 +305,12 @@ if __name__ == '__main__':
     link_record_mapping = {}
     for data_spec in data_specs:
         record_id, sep, link = [d.strip() for d in data_spec.rpartition(': ')]
-        if '://' not in link:
-            link = f'{args.protocol}://{link}'
-        links.append(link)
-        if record_id:
-            link_record_mapping[link] = record_id
+        if link:
+            if '://' not in link:
+                link = f'{args.protocol}://{link}'
+            links.append(link)
+            if record_id:
+                link_record_mapping[link] = record_id
 
     yaml = records_to_yaml(
         parse_ena_fastq_ftp_links(
