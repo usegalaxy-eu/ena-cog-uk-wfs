@@ -5,11 +5,43 @@ from find_by_tags import find_histories_by_tags
 
 
 def show_matching_dataset_info(
-    gi, history_id, dataset_names, visible=None, types=None
+    gi, history_id, dataset_names,
+    visible=None, types=None, include_invocation_inputs=True
 ):
     history_datasets_info = gi.histories.show_history(
         history_id, contents=True, visible=visible, deleted=False, types=types
     )
+
+    if include_invocation_inputs:
+        if not types:
+            src_types = ['hda', 'hdca']
+        else:
+            src_types = []
+            if 'dataset' in types:
+                src_types.append('hda')
+            if 'dataset_collection' in types:
+                src_types.append('hdca')
+
+        invocations = gi.invocations.get_invocations(history_id=history_id)
+        for invocation in invocations:
+            for input_info in gi.invocations.show_invocation(
+                invocation['id']
+            )['inputs'].values():
+                if input_info['src'] not in src_types:
+                    continue
+                elif input_info['src'] == 'hda':
+                    input_details = gi.datasets.show_dataset(
+                        input_info['id']
+                    )
+                elif input_info['src'] == 'hdca':
+                    input_details = gi.dataset_collections.show_dataset_collection(
+                        input_info['id']
+                    )
+                if input_details['name'] in dataset_names:
+                    if visible is None or visible == input_details['visible']:
+                        if input_details['deleted'] == False:
+                            history_datasets_info.append(input_details)
+
     ret = []
     for name in dataset_names:
         ret.append([])
@@ -22,7 +54,7 @@ def show_matching_dataset_info(
 def get_matching_datasets_from_histories(
     gi,
     history_ids, dataset_names,
-    visible=None, types=None, strict=False,
+    visible=None, types=None, include_invocation_inputs=True, strict=False,
     max_matching=None
 ):
     yield_count = 0
@@ -140,12 +172,15 @@ if __name__ == '__main__':
             template = sys.stdin.read()
             flat_histories = []
             flat_datasets = []
+            history_cache = {}
             for datasets in datasets_matcher:
-                flat_histories.extend(
-                    gi.histories.get_histories(
-                        history_id=datasets[0]['history_id']
-                    )
-                )
+                for dataset in datasets:
+                    history_id = dataset['history_id']
+                    if history_id not in history_cache:
+                        history_cache[history_id] = gi.histories.show_history(
+                            history_id=history_id
+                        )
+                    flat_histories.append(history_cache[history_id])
                 flat_datasets.extend(datasets)
             if flat_histories:
                 out.write(template.format(
@@ -163,12 +198,14 @@ if __name__ == '__main__':
                 'dataset_state'
             ]) + '\n')
 
+            history_cache = {}
             for datasets in datasets_matcher:
-                history_id = datasets[0]['history_id']
-                history_name = gi.histories.get_histories(
-                    history_id=history_id
-                )[0]['name']
                 for dataset in datasets:
+                    history_id = dataset['history_id']
+                    if history_id not in history_cache:
+                        history_cache[history_id] = gi.histories.show_history(
+                            history_id=history_id
+                        )
                     dataset_download_url = '/'.join([
                         part.strip('/') for part in [
                             args.galaxy_url,
@@ -183,7 +220,7 @@ if __name__ == '__main__':
                     out.write(
                         '\t'.join([
                             history_id,
-                            history_name,
+                            history_cache[history_id],
                             dataset['id'],
                             dataset['name'],
                             dataset['history_content_type'],
