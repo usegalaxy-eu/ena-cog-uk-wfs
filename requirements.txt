@@ -1,2 +1,2 @@
-bioblend
+bioblend >= 0.16
 git+https://github.com/galaxyproject/planemo.git@master#egg=planemo

@@ -56,7 +56,7 @@ if [ -s "$WORKDIR/$JOB_YML" ]; then
     planemo -v run $WF_ID "$WORKDIR/$JOB_YML" --history_name "$DEST_NAME_BASE $DEST_NAME_SUFFIX" --tags $DEST_TAG --galaxy_url "$GALAXY_SERVER" --galaxy_user_key $API_KEY --engine external_galaxy 2>&1 > /dev/null | grep -o 'GET /api/histories/[^?]*\?' > "$WORKDIR/run_info.txt" &&
     # on successful completion of the WF invocation inform downstream bots
     # by tagging the new history accordingly
-    DEST_HISTORY_ID=$(grep -m1 -o 'histories/[^?]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) &&
+    DEST_HISTORY_ID=$(grep -m1 -o 'histories/[0-9a-f]*' "$WORKDIR/run_info.txt" | cut -d / -f 2) &&
     python bioblend-scripts/tag_history.py $DEST_HISTORY_ID -g "$GALAXY_SERVER" -a $API_KEY -t $DEST_BOT_TAGS &&
     # mark the source history ENA links dataset as processed
     python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL3 -r $BOT_SIGNAL1 $BOT_SIGNAL2

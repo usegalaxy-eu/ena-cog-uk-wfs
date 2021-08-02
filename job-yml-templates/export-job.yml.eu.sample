@@ -3,8 +3,8 @@
 #new_history_name_suffix: Viral Beacon export
 #new_history_tag: data-export
 
-#from_history_name: {histories[0][name]}
-#from_history_id: {histories[0][id]}
+#from_history_name: {histories[2][name]}
+#from_history_id: {histories[2][id]}
 
 Annotated list of variants:
   class: Collection
