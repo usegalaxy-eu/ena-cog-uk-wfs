@@ -13,6 +13,12 @@ def show_matching_dataset_info(
     )
 
     if include_invocation_inputs:
+        # keep track of what we have found already because:
+        # - a workflow input may also come from the same history
+        # - the same data could be used as workflow input several times
+        data_seen = {
+            (d['id'], d['history_content_type']) for d in history_datasets_info
+        }
         if not types:
             src_types = ['hda', 'hdca']
         else:
@@ -37,10 +43,25 @@ def show_matching_dataset_info(
                     input_details = gi.dataset_collections.show_dataset_collection(
                         input_info['id']
                     )
-                if input_details['name'] in dataset_names:
-                    if visible is None or visible == input_details['visible']:
-                        if input_details['deleted'] == False:
-                            history_datasets_info.append(input_details)
+                if input_details['name'] not in dataset_names:
+                    continue
+                if (
+                    input_details['id'], input_details['history_content_type']
+                ) in data_seen:
+                    continue
+                if visible is None or visible == input_details['visible']:
+                    if input_details['deleted'] == False:
+                        if 'elements' in input_details:
+                            # Details about a collection's elements just
+                            # increase the object size and would not be
+                            # available when discovered as a regular history
+                            # item anyway.
+                            del input_details['elements']
+                        data_seen.add((
+                            input_details['id'],
+                            input_details['history_content_type']
+                        ))
+                        history_datasets_info.append(input_details)
 
     ret = []
     for name in dataset_names:
