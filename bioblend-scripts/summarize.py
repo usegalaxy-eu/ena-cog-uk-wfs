@@ -123,7 +123,7 @@ class COGUKSummary():
         else:
             self.tags = {
                 'variation': [
-                    'cog-uk_variation', 'report-bot-ok', 'consensus-bot-ok'
+                    'report-bot-ok', 'consensus-bot-ok'
                 ],
                 'consensus': ['cog-uk_consensus'],
                 'report': ['cog-uk_report']
