@@ -1,6 +1,13 @@
 #use_server: https://usegalaxy.org
-#list_pe_workflow_id: f201a6928b92f593
-#nested_list_workflow_id: n.a.
+#pe_workflow_id: f201a6928b92f593
+#pe_collection_name: Paired Collection
+#nested_pe_workflow_id:
+#nested_pe_collection_name_fw: Nested collection of forward reads
+#nested_pe_collection_name_rv: Nested collection of reverse reads
+#se_workflow_id:
+#se_collection_name:
+#nested_se_workflow_id:
+#nested_se_collection_name:
 #new_history_base_name: COG-UK
 #new_history_tag: cog-uk_variation_v3
 #history_for_downloads: 2833f6e83aa8f9f2
