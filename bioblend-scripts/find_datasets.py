@@ -1,3 +1,4 @@
+import re
 import sys
 
 from bioblend import galaxy
@@ -8,6 +9,7 @@ def show_matching_dataset_info(
     gi, history_id, dataset_names,
     visible=None, types=None, include_invocation_inputs=True
 ):
+    name_patterns = [re.compile(name) for name in dataset_names]
     history_datasets_info = gi.histories.show_history(
         history_id, contents=True, visible=visible, deleted=False, types=types
     )
@@ -43,7 +45,9 @@ def show_matching_dataset_info(
                     input_details = gi.dataset_collections.show_dataset_collection(
                         input_info['id']
                     )
-                if input_details['name'] not in dataset_names:
+                if not any(
+                    pat.fullmatch(input_details['name']) for pat in name_patterns
+                ):
                     continue
                 if (
                     input_details['id'], input_details['history_content_type']
@@ -64,10 +68,10 @@ def show_matching_dataset_info(
                         history_datasets_info.append(input_details)
 
     ret = []
-    for name in dataset_names:
+    for pat in name_patterns:
         ret.append([])
         for h in history_datasets_info:
-            if name == h['name']:
+            if pat.fullmatch(h['name']):
                 ret[-1].append(h)
     return ret
 
