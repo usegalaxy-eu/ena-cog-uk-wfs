@@ -116,6 +116,10 @@ if __name__ == '__main__':
         help='Names of the dataset(s) to report'
     )
     parser.add_argument(
+        '--history_id', type=str,
+        help='History id'
+    )
+    parser.add_argument(
         '--include-hidden', action='store_true',
         help='Include matching, but hidden datasets'
     )
@@ -167,10 +171,13 @@ if __name__ == '__main__':
         key=args.api_key
     )
 
-    history_ids = find_histories_by_tags(
-        args.history_tags,
-        gi.histories.get_histories()
-    )
+    if args.history_id:
+        history_ids = [args.history_id]
+    else:
+        history_ids = find_histories_by_tags(
+            args.history_tags,
+            gi.histories.get_histories()
+        )
     if args.datasets_only:
         dataset_types = ['dataset']
     elif args.collections_only:
