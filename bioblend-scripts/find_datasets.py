@@ -245,7 +245,7 @@ if __name__ == '__main__':
                     out.write(
                         '\t'.join([
                             history_id,
-                            history_cache[history_id],
+                            history_cache[history_id]['name'],
                             dataset['id'],
                             dataset['name'],
                             dataset['history_content_type'],
