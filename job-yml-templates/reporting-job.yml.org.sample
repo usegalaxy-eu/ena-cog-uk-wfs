@@ -1,7 +1,8 @@
 #use_server: https://usegalaxy.org
 #use_workflow_id: d091542fc0931b90
 #new_history_name_suffix: Reporting
-#new_history_tag: cog-uk_report
+#new_history_tag: gx_report
+#vcf_input_name: Final \(SnpEff-\) annotated variants
 
 #from_history_name: {histories[0][name]}
 #from_history_id: {histories[0][id]}
