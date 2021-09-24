@@ -1,5 +1,5 @@
-#use_server: https://usegalaxy.eu
-#use_workflow_id: 9abace7e8f37c69a
+#use_server: https://usegalaxy.org
+#use_workflow_id: 70ab1097bb229f90
 #new_history_name_suffix: Consensus
 #new_history_tag: cog-uk_consensus
 #bam_input_name: Fully processed reads for variant calling \(primer-trimmed, realigned reads\)
@@ -19,6 +19,6 @@ aligned reads data for depth calculation:
   galaxy_id: "{datasets[0][id]}"
 Reference genome:
   # This dataset is part of the published history
-  # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
+  # https://usegalaxy.org/u/aun1/h/artic-v3
   class: File
-  galaxy_id: "11ac94870d0bb33a66d3e6ba690be46d"
+  galaxy_id: bbd44e69cb8906b5ed2585053d93e340
