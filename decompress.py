@@ -9,7 +9,7 @@ if __name__ == "__main__":
   ap.add_argument("output", help="Name of the decompressed file", required=True)
   args = ap.parse_args()
 
-  with open(args.input, "r") as in_f, open(args.output], "w") as out_f:
+  with open(args.input, "r") as in_f, open(args.output, "w") as out_f:
     compressed_data = json.load(in_f)
   
     # A row has the following columns
@@ -22,4 +22,4 @@ if __name__ == "__main__":
       sample = row[0]
       pos, ref, alt, af, effect, codon, trid = row[1]
       aa = row[2]
-      out_f.write('\t'.join([sample, str(pos), ref, alt, str(af), effect, codon, trid, aa]) + '\n'))
+      out_f.write('\t'.join([sample, str(pos), ref, alt, str(af), effect, codon, trid, aa]) + '\n')
