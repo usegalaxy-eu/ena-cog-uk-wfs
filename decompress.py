@@ -22,4 +22,4 @@ if __name__ == "__main__":
       sample = row[0]
       pos, ref, alt, effect, codon, trid, aa = row[1]
       af = row[2]
-      out_f.write('\t'.join([sample, str(pos), ref, alt, effect, codon, trid, str(aa), str(af)]) + '\n')
+      out_f.write('\t'.join([sample, str(pos), ref, alt, effect, codon, trid, aa, str(af)]) + '\n')
