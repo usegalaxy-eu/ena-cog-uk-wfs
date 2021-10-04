@@ -13,13 +13,13 @@ if __name__ == "__main__":
     compressed_data = json.load(in_f)
 
     # A row has the following columns
-    # "Sample","POS","REF","ALT","AF","EFFECT","CODON","TRID","AA"
-    header = "Sample\tPOS\tREF\tALT\tAF\tEFFECT\tCODON\tTRID\tAA\n"
+    # "Sample","POS","REF","ALT","EFFECT","CODON","TRID","AA","AF"
+    header = "Sample\tPOS\tREF\tALT\tEFFECT\tCODON\tTRID\tAA\tAF\n"
     out_f.write(header)
 
     rows_gen = parse_compressed(compressed_data)
     for row in rows_gen:
       sample = row[0]
-      pos, ref, alt, af, effect, codon, trid = row[1]
-      aa = row[2]
-      out_f.write('\t'.join([sample, str(pos), ref, alt, str(af), effect, codon, trid, str(aa)]) + '\n')
+      pos, ref, alt, effect, codon, trid, aa = row[1]
+      af = row[2]
+      out_f.write('\t'.join([sample, str(pos), ref, alt, effect, codon, trid, str(aa), str(af)]) + '\n')
