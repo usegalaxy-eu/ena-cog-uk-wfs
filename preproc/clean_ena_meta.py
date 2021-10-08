@@ -31,8 +31,10 @@ class ENAMetaSummary():
                 fields = line.split('\t')
                 if not fields[self.col_lookup['checklist']]:
                     continue
-                if fields[self.col_lookup['collection_date']] == '2020-01-01':
+                coll_date = fields[self.col_lookup['collection_date']]
+                if coll_date == '2020-01-01' or not coll_date:
                     continue
+
                 library_layout = fields[self.col_lookup['library_layout']]
                 library_strategy = fields[self.col_lookup['library_strategy']]
                 link_field = fields[self.col_lookup['fastq_ftp']]
