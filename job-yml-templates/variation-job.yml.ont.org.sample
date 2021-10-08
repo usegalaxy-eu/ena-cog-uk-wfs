@@ -1,18 +1,13 @@
 #use_server: https://usegalaxy.org
-#pe_workflow_id: f201a6928b92f593
-#pe_collection_name: Paired Collection
-#nested_pe_workflow_id:
-#nested_pe_collection_name_fw: Nested collection of forward reads
-#nested_pe_collection_name_rv: Nested collection of reverse reads
-#se_workflow_id:
-#se_collection_name:
+#se_workflow_id: 062b3efda2a24efb
+#se_collection_name: ONT-sequenced reads
 #nested_se_workflow_id:
 #nested_se_collection_name:
-#new_history_base_name: COG-UK
-#new_history_tag: cog-uk_variation_v3
-#history_for_downloads: 2833f6e83aa8f9f2
-#metadata_history_tag: bot-upload-meta
-#metadata_collection_name: Links to upload
+#new_history_base_name: gx-Surveillance
+#new_history_tag: gx_variation
+#history_for_downloads: cb3b1ad39711c6aa
+#metadata_history_tag: gx_meta
+#metadata_collection_name: ONT ARTIC links
 #download_protocol: ftp
 
 ## Change only if you know what you're doing
@@ -23,16 +18,13 @@
 #from_ena_links_in: {collections[0][elements][0][object][id]}
 #batch_name: {collections[0][elements][0][element_identifier]}
 
-ARTIC primer BED:
+Minimum read length: 400
+Maximum read length: 700
+Primer binding sites info in BED format:
   # This dataset is part of the published history
   # https://usegalaxy.org/u/aun1/h/artic-v3
   class: File
   galaxy_id: bbd44e69cb8906b5c82bd16bd5b920e4
-ARTIC primers to amplicon assignments:
-  # This dataset is part of the published history
-  # https://usegalaxy.org/u/aun1/h/artic-v3
-  class: File
-  galaxy_id: bbd44e69cb8906b50f577ef2f87bde44
 NC_045512.2 FASTA sequence of SARS-CoV-2:
   # This dataset is part of the published history
   # https://usegalaxy.org/u/aun1/h/artic-v3

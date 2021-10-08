@@ -15,13 +15,15 @@ The actions of all scripts in the collection are controlled and coordinated via
 a system of Galaxy dataset and history tags that is used to communicate input
 data availability and the state of the overall analysis progress.
 
-When run together the scripts support a fully automated SARS-CoV-2 analysis
-pipeline for ARTIC paired-end sequencing data that includes
+When run together the scripts support a fully automated SARS-CoV-2 sequence data analysis
+pipeline that includes
 
 - raw sequencing data upload into Galaxy and organization of the data into dataset collections
-- variant calling using our highly sensitive [published workflow for variation analysis on ARTIC PE data](https://github.com/iwc-workflows/sars-cov-2-pe-illumina-artic-variant-calling)
+- variant calling using one of our highly sensitive published workflows for either:
+  - [variation analysis on ARTIC PE data](https://github.com/iwc-workflows/sars-cov-2-pe-illumina-artic-variant-calling), or
+  - [variation analysis on ARTIC ONT data](https://github.com/iwc-workflows/sars-cov-2-ont-artic-variant-calling)
 - generation of reports of all identified variants
-- reliable consensus sequence building including soft-masking of questionable sites
+- reliable consensus sequence building including masking of questionable sites
 - export of key analysis results - BAM files of aligned reads, VCF files of called variants, FASTA consensus sequences to a user-specific FTP folder for simplified downloading with standard FTP clients.
 
 The full pipeline with all script actions looks like this:
@@ -46,14 +48,6 @@ Learn more about:
 - [Uploading and organizing download links files](./data_import.md)
 - [Installation and configuration of the scripts](./manual.md)
 
-## Limitations
-
-The current collection of scripts supports *only* analysis of ARTIC-amplified
-paired-end sequencing data as this is by far the most commonly used protocol
-in large-scale sequencing efforts.
-
-We hope to be able to offer support for other sequencing protocols in future
-releases. See also the next paragraph :)
 
 ## Contributions welcome
 

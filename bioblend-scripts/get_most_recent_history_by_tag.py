@@ -21,4 +21,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
-    sys.stdout.write(gi.histories._get(params={'q': ['tag'], 'qv': [args.tag]})[0]['id'])
+    tag_carrying_histories = gi.histories._get(params={'q': ['tag'], 'qv': [args.tag]})
+    if tag_carrying_histories:
+        sys.stdout.write(tag_carrying_histories[0]['id'])

@@ -3,15 +3,15 @@ BOT_TAG='bot-go-report'
 BOT_STATUS1='report-bot-scheduling'
 BOT_STATUS2='report-bot-processing'
 BOT_STATUS3='report-bot-ok'
-VCF_DATA='Final (SnpEff-) annotated variants'
 JOB_YML='reporting-job.yml'
+JOB_YML_DIR='job-yml-templates'
 
 # read bot config
-JOB_YML_DIR='job-yml-templates'
 GALAXY_SERVER=$(grep '#use_server:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 WF_ID=$(grep '#use_workflow_id:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 DEST_NAME_SUFFIX=$(grep '#new_history_name_suffix:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 DEST_TAG=$(grep '#new_history_tag:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
+VCF_DATA=$(grep '#vcf_input_name:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 
 # start processing
 WORKDIR=$BOT_TAG'_run_'$(date '+%s')
