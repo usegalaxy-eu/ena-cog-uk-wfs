@@ -123,7 +123,7 @@ class COGUKSummary():
         else:
             self.tags = {
                 'variation': [
-                    'cog-uk_variation', 'report-bot-ok', 'consensus-bot-ok'
+                    'report-bot-ok', 'consensus-bot-ok'
                 ],
                 'consensus': ['cog-uk_consensus'],
                 'report': ['cog-uk_report']
@@ -498,7 +498,7 @@ if __name__ == '__main__':
              'by --check-data-availability should be saved to.'
     )
     parser.add_argument(
-        '-s', '--study-accession',
+        '-s', '--study-accession', nargs='*',
         help='Work only on the subset of records with "study_accession" '
              'equal this value'
     )
@@ -593,7 +593,7 @@ if __name__ == '__main__':
         s = COGUKSummary(
             {
                 k: v for k,v in s.summary.items()
-                if v.get('study_accession') == args.study_accession
+                if v.get('study_accession') in args.study_accession
             }
         )
     if args.check_data_availability:
