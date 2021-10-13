@@ -200,7 +200,7 @@ class COGUKSummary():
             annotated_vars_info, by_sample_info = show_matching_dataset_info(
                 gi, history['id'],
                 [
-                    'Final (SnpEff-) annotated variants',
+                    'Final \(SnpEff-\) annotated variants',
                     'Combined Variant Report by Sample'
                 ],
                 visible=True
@@ -258,7 +258,7 @@ class COGUKSummary():
         for history in histories_to_search:
             annotated_vars_info = show_matching_dataset_info(
                 gi, history['id'],
-                ['Final (SnpEff-) annotated variants'],
+                ['Final \(SnpEff-\) annotated variants'],
                 types='dataset_collection'
             )[0]
             if not annotated_vars_info:
