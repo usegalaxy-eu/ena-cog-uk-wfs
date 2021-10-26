@@ -538,14 +538,14 @@ if __name__ == '__main__':
     ) or (args.discover_new_data
     ) or (args.make_accessible
     ) or (args.fix_existing
-    ) or args.complete_only or args.check_data_availability:
+    ) or args.completed_only or args.check_data_availability:
         if not args.galaxy_url or not args.api_key:
             sys.exit(
                 'Getting data from a Galaxy server requires its URL and an '
                 'API key to be specified via the -g and -a options.'
             )
         gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
-    if args.retain_incomplete and args.complete_only:
+    if args.retain_incomplete and args.completed_only:
         sys.exit(
             '--retain-incomplete and --complete-only are mutually '
             'exclusive flags.'
