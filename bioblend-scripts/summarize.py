@@ -659,7 +659,7 @@ if __name__ == '__main__':
                         '(state: "{0}")'.format(dataset_info['state'])
                     )
                     continue
-        completed[k] = v
+            completed[k] = v
         s = COGUKSummary(completed)
 
     if args.check_data_availability:
