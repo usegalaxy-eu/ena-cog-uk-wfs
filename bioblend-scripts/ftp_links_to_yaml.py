@@ -7,6 +7,8 @@ import argparse
 import time
 import yaml
 
+from collections import Counter
+
 from bioblend import galaxy
 
 
@@ -82,10 +84,7 @@ def upload_from_links(links, gi, history_id, upload_attempts, timeout):
             return links_dataset_ids
 
 
-def parse_ena_fastq_ftp_links(ena_links, link_record_mapping=None):
-    if link_record_mapping is None:
-        link_record_mapping = {}
-    records = {}
+class LinkCollection():
     pe_indicator_mapping = {
         '1': 'forward',
         '2': 'reverse',
@@ -94,34 +93,88 @@ def parse_ena_fastq_ftp_links(ena_links, link_record_mapping=None):
         'r1': 'forward',
         'r2': 'reverse'
     }
-    is_pe_data = None
-    for link, dataset_id in ena_links.items():
-        path, file = link.rsplit('/', maxsplit=1)
-        file_base, file_suffix = file.split('.', maxsplit=1)
-        if is_pe_data is None:
-            # Use the first link to decide wether we are dealing with
-            # SE or PE data links.
-            # If the preparsed ENA ID ends in '_[rR]?1' or '_[rR]?2',
-            # the links are for PE data.
-            # Anything else is treated as SE data links.
+
+    def __init__(self, data_specs, default_protocol=None):
+        self.link_records = {}
+        pe_indicators_seen = Counter()
+        for data_spec in data_specs:
+            record_id, sep, link = [
+                d.strip() for d in data_spec.rpartition(': ')
+            ]
+            if not link:
+                continue
+            if '://' not in link and default_protocol:
+                link = f'{default_protocol}://{link}'
+            path, file = link.rsplit('/', maxsplit=1)
+            file_base, file_suffix = file.split('.', maxsplit=1)
+            pe_indicator = None
             try:
                 a, sep, b = file_base.rpartition('_')
-                pe_indicator = pe_indicator_mapping[b]
-                is_pe_data = True
+                pe_indicator = self.pe_indicator_mapping[b]
+                # found a valid PE suffix
+                pe_indicators_seen[pe_indicator] += 1
+                file_base = a
             except (ValueError, KeyError):
-                is_pe_data = False
-        if is_pe_data:
-            file_base, sep, pe_indicator = file_base.rpartition('_')
-            record_id = link_record_mapping.get(link, file_base)
+                # no valid PE suffix, possibly SE data
+                pass
+            if not record_id:
+                record_id = file_base
+            self.link_records[link] = {
+                'ID': record_id,
+                'file_base': file_base
+            }
+            if pe_indicator:
+                self.link_records[link]['pe_indicator'] = pe_indicator
+        if not self.link_records:
+            raise ValueError('No links found in input!')
+        if pe_indicators_seen['forward'] and pe_indicators_seen['reverse']:
+            sum_pe_links = pe_indicators_seen['forward'] + pe_indicators_seen['reverse']
+            if sum_pe_links != len(self.link_records):
+                raise ValueError(
+                    'Some of the data looks like paired-end, '
+                    'but unpairable links have been found, too!'
+                )
+            if pe_indicators_seen['forward'] != pe_indicators_seen['reverse']:
+                raise ValueError(
+                    'Data looks like paired-end, but an unequal number of '
+                    'forward and reverse read links have been detected!'
+                )
+            self.is_pe_data = True
+        else:
+            self.is_pe_data = False
+
+    def __getitem__(self, x):
+        return self.link_records[x]
+
+    def __iter__(self):
+        return iter(list(self.link_records))
+
+    def items(self):
+        return self.link_records.items()
+
+    def keys(self):
+        return self.link_records.keys()
+
+    def values(self):
+        return self.link_records.values()
+
+
+def parse_fastq_links(links, gx_upload_result):
+    records = {}
+    if links.is_pe_data:
+        for link, dataset_id in gx_upload_result.items():
+            record_id = links[link]['ID']
+            file_base = links[link]['file_base']
+            pe_indicator = links[link]['pe_indicator']
             if record_id not in records:
                 records[record_id] = {}
             if file_base not in records[record_id]:
                 records[record_id][file_base] = {}
-            records[record_id][file_base][
-                pe_indicator_mapping[pe_indicator]
-            ] = dataset_id
-        else:
-            record_id = link_record_mapping.get(link, file_base)
+            records[record_id][file_base][pe_indicator] = dataset_id
+    else:
+        for link, dataset_id in gx_upload_result.items():
+            record_id = links[link]['ID']
+            file_base = links[link]['file_base']
             if record_id not in records:
                 records[record_id] = {}
             records[record_id][file_base] = dataset_id
@@ -301,23 +354,15 @@ if __name__ == '__main__':
         args.dataset_id
     ).decode("utf-8").splitlines()[1:]
 
-    links = []
-    link_record_mapping = {}
-    for data_spec in data_specs:
-        record_id, sep, link = [d.strip() for d in data_spec.rpartition(': ')]
-        if link:
-            if '://' not in link:
-                link = f'{args.protocol}://{link}'
-            links.append(link)
-            if record_id:
-                link_record_mapping[link] = record_id
+    links = LinkCollection(data_specs, default_protocol=args.protocol)
 
     yaml = records_to_yaml(
-        parse_ena_fastq_ftp_links(
+        parse_fastq_links(
+            links,
             upload_from_links(
                 links, gi, args.history_id,
                 args.upload_attempts, args.upload_timeout
-            ), link_record_mapping
+            )
         ),
         args.collection_name
     )
