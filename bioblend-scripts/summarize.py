@@ -486,6 +486,11 @@ if __name__ == '__main__':
              'histories are known)'
     )
     parser.add_argument(
+        '--completed-only', action='store_true',
+        help='Emit only fully completed records (for which all analysis '
+             'histories have been completed successfully)'
+    )
+    parser.add_argument(
         '--check-data-availability', action='store_true',
         help='Check that data pointed to by Galaxy download links '
              'is actually available by performing the downloads of '
@@ -532,13 +537,19 @@ if __name__ == '__main__':
     if (not args.use_existing_file
     ) or (args.discover_new_data
     ) or (args.make_accessible
-    ) or args.fix_existing or args.check_data_availability:
+    ) or (args.fix_existing
+    ) or args.completed_only or args.check_data_availability:
         if not args.galaxy_url or not args.api_key:
             sys.exit(
                 'Getting data from a Galaxy server requires its URL and an '
                 'API key to be specified via the -g and -a options.'
             )
         gi = galaxy.GalaxyInstance(args.galaxy_url, args.api_key)
+    if args.retain_incomplete and args.completed_only:
+        sys.exit(
+            '--retain-incomplete and --complete-only are mutually '
+            'exclusive flags.'
+        )
     if args.fix_existing:
         if args.write_new_only:
             sys.exit(
@@ -596,9 +607,21 @@ if __name__ == '__main__':
                 if v.get('study_accession') in args.study_accession
             }
         )
-    if args.check_data_availability:
-        checked_summary = {}
-        # currently the only thing checked are the datamonkey links
+
+    if not args.retain_incomplete:
+        partial_records = set(s.get_problematic().keys())
+        s = s.__class__(
+            {
+                k: v for k, v in s.summary.items()
+                if k not in partial_records
+            }
+        )
+
+    if args.check_data_availability or args.completed_only:
+        # The by-sample report and the multi-fasta consensus datasets
+        # checked here combine information from upstream collections.
+        # If they are in an ok state, then everything before must be so, too.
+        completed = {}
         for k, v in s.summary.items():
             # skip incomplete records without proper report info
             # and records that are not available from the current
@@ -607,15 +630,43 @@ if __name__ == '__main__':
                 continue
             if not v['report']['history_link'].startswith(gi.base_url):
                 continue
+
             dataset_id = v['report']['datamonkey_link'].split('/')[-2]
             dataset_info = gi.datasets.show_dataset(dataset_id)
             if dataset_info['state'] != 'ok':
                 print(
-                    'Skipping by_sample report not ready for downloading:',
+                    'Skipping record for which by-sample report is not ready:',
                     v['report']['history_link'],
                     '(state: "{0}")'.format(dataset_info['state'])
                 )
                 continue
+            if args.completed_only:
+                # --check-data-availability does not care about the
+                # consensus history state, but --completed-only does.
+                if not v.get('consensus', '').startswith(gi.base_url):
+                    continue
+                consensus_history_id = v['consensus'].split('id=')[-1]
+                dataset_info = show_matching_dataset_info(
+                    gi, consensus_history_id,
+                    ['Multisample consensus FASTA'],
+                    types=['dataset'],
+                    include_invocation_inputs=False
+                )[0][0]
+                if dataset_info['state'] != 'ok':
+                    print(
+                        'Skipping record for which multi-sample fasta is not ready:',
+                        v['consensus'],
+                        '(state: "{0}")'.format(dataset_info['state'])
+                    )
+                    continue
+            completed[k] = v
+        s = COGUKSummary(completed)
+
+    if args.check_data_availability:
+        checked_summary = {}
+        # currently the only thing checked/downloaded are the datamonkey links
+        for k, v in s.summary.items():
+            dataset_id = v['report']['datamonkey_link'].split('/')[-2]
             try:
                 gi.datasets.download_dataset(
                     dataset_id,
@@ -640,6 +691,7 @@ if __name__ == '__main__':
                 raise
             checked_summary[k] = v
         s = COGUKSummary(checked_summary)
+
     if args.make_accessible:
         s.make_accessible(gi, tag='bot-published')
 
@@ -693,14 +745,6 @@ if __name__ == '__main__':
                     s.summary[k]['study_accession'] = '?'
 
     if args.format_tabular:
-        if not args.retain_incomplete:
-            partial_records = set(s.get_problematic().keys())
-            s = s.__class__(
-                {
-                    k: v for k, v in s.summary.items()
-                    if k not in partial_records
-                }
-            )
         with open(args.ofile, 'w') as o:
             print(
                 'run_accession',
