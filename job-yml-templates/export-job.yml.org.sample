@@ -1,0 +1,21 @@
+#use_server: https://usegalaxy.org
+#use_workflow_id: 9991cfb13a1b3558
+#new_history_name_suffix: Viral Beacon export
+#new_history_tag: data-export
+#bam_input_name: Fully processed reads for variant calling \(primer-trimmed, realigned reads with added indelquals\)
+#vcf_input_name: Final \(SnpEff-\) annotated variants
+#fasta_input_name: Consensus sequence with masking
+
+#from_history_name: {histories[2][name]}
+#from_history_id: {histories[2][id]}
+
+Annotated list of variants:
+  class: Collection
+  galaxy_id: "{datasets[1][id]}"
+Fully processed aligned reads:
+  class: Collection
+  galaxy_id: "{datasets[0][id]}"
+Consensus FASTA sequences:
+  class: Collection
+  galaxy_id: "{datasets[2][id]}"
+
