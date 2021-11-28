@@ -1,5 +1,5 @@
 #use_server: https://usegalaxy.eu
-#use_workflow_id: a0a2ccff54d0012a
+#use_workflow_id: 87b50a533dc99853
 #new_history_name_suffix: Viral Beacon export
 #new_history_tag: data-export
 #bam_input_name: Fully processed reads for variant calling \(primer-trimmed, realigned reads with added indelquals\)
