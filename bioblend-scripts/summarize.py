@@ -197,22 +197,25 @@ class COGUKSummary():
         # and record duplicates
         ids_with_duplicated_reports = set()
         for history in histories_to_search:
-            annotated_vars_info, by_sample_info = show_matching_dataset_info(
+            key_data = show_matching_dataset_info(
                 gi, history['id'],
                 [
                     'Final \(SnpEff-\) annotated variants',
-                    'Combined Variant Report by Sample'
+                    'Combined Variant Report by Sample',
+                    'Variant-Frequency Plot.+'
                 ],
                 visible=True
             )
-            if not annotated_vars_info or not by_sample_info:
+            if not all(key_data):
                 continue
 
+            annotated_vars, by_sample_report, batch_plot = [
+                d[0] for d in key_data
+            ]
             vcf_elements = gi.histories.show_dataset_collection(
-                history['id'], annotated_vars_info[0]['id']
+                history['id'], annotated_vars['id']
             )['elements']
             variation_from = vcf_elements[0]['object']['history_id']
-            by_sample_report = by_sample_info[0]
 
             if variation_from in partial_data:
                 if 'report' in partial_data:
@@ -221,6 +224,8 @@ class COGUKSummary():
                     sample_names = [e['element_identifier'] for e in vcf_elements]
                     partial_data[variation_from]['samples'] = sample_names
                     partial_data[variation_from]['time'] = by_sample_report['create_time']
+                    partial_data[variation_from]['batch_plot'] = \
+                        gi.base_url + batch_plot['url'] + '/display'
                     partial_data[variation_from]['report'] = {
                         'history_link': '{0}/histories/view?id={1}'.format(
                             gi.base_url, history['id']
@@ -239,6 +244,7 @@ class COGUKSummary():
             for record in ids_with_duplicated_reports:
                 partial_data[record].pop('time')
                 partial_data[record].pop('report')
+                partial_data[record].pop('batch_plot')
                 print('{0}\t{1}'.format(
                     partial_data[record]['batch_id'],
                     partial_data[record]['variation']
@@ -335,7 +341,7 @@ class COGUKSummary():
     def get_history_ids(self, history_type, gi=None):
         """Get the IDs of histories contained in the summary.
 
-        `history_type` needs to be one of ['variation', 'reporting',
+        `history_type` needs to be one of ['variation', 'report',
         'consensus'] and determines the type of histories IDs of which will be
         returned.
 
