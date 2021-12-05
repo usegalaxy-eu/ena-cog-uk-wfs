@@ -11,8 +11,8 @@
 #new_history_base_name: COG-UK
 #new_history_tag: cog-uk_variation_v3
 #history_for_downloads: 2833f6e83aa8f9f2
-#metadata_history_tag: bot-upload-meta
-#metadata_collection_name: Links to upload
+#metadata_history_tag: gx_meta
+#metadata_collection_name: Illumina ARTIC links
 #download_protocol: ftp
 
 ## Change only if you know what you're doing

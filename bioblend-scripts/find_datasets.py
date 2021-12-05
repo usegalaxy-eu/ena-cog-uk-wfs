@@ -54,7 +54,7 @@ def show_matching_dataset_info(
                 ) in data_seen:
                     continue
                 if visible is None or visible == input_details['visible']:
-                    if input_details['deleted'] == False:
+                    if input_details['deleted'] is False:
                         if 'elements' in input_details:
                             # Details about a collection's elements just
                             # increase the object size and would not be
