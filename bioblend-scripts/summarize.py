@@ -78,7 +78,13 @@ def get_ena_meta_chunk(samples):
                 _ = i.readline() # throw away header line
                 newly_found = {}
                 for line in i:
-                    _, coll_date, accession, study, erc = line.strip('\n\r').split('\t')
+                    try:
+                        _, coll_date, accession, study, erc = line.strip('\n\r').split('\t')
+                    except ValueError:
+                        raise ValueError(
+                            'Could not parse ENA response: ',
+                            line.strip('\n\r')
+                        )
                     if accession in not_found:
                         if accession not in newly_found:
                             newly_found[accession] = [(study, coll_date, erc)]
