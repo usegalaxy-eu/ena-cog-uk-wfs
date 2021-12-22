@@ -1,0 +1,41 @@
+#use_server: https://usegalaxy.eu
+#pe_workflow_id: 91c6525d7b9c43a9
+#pe_collection_name: Paired Collection
+#nested_pe_workflow_id: cdc8e12dea66774c
+#nested_pe_collection_name_fw: Nested collection of forward reads
+#nested_pe_collection_name_rv: Nested collection of reverse reads
+#se_workflow_id:
+#se_collection_name:
+#nested_se_workflow_id:
+#nested_se_collection_name:
+#new_history_base_name: gx-Surveillance
+#new_history_tag: gx_variation
+#history_for_downloads: 96cd6d8191d4e3d6
+#metadata_history_tag: gx_meta
+#metadata_collection_name: Illumina ARTIC links
+#download_protocol: ftp
+
+## Change only if you know what you're doing
+#min_run_delta: 0.67
+
+#from_history_name: {histories[0][name]}
+#from_history_id: {histories[0][id]}
+#from_ena_links_in: {collections[0][elements][0][object][id]}
+#batch_name: {collections[0][elements][0][element_identifier]}
+
+ARTIC primer BED:
+  # ARTICv4
+  # This dataset is part of the published history
+  # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
+  class: File
+  galaxy_id: 11ac94870d0bb33aaf1015859a1e5706
+ARTIC primers to amplicon assignments:
+  # This dataset is part of the published history
+  # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
+  class: File
+  galaxy_id: 11ac94870d0bb33a66b03c26e54c2174
+NC_045512.2 FASTA sequence of SARS-CoV-2:
+  # This dataset is part of the published history
+  # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
+  class: File
+  galaxy_id: 11ac94870d0bb33a66d3e6ba690be46d
