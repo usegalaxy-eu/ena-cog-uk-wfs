@@ -118,10 +118,13 @@ if __name__ == '__main__':
             flat_datasets = []
             sliced_collections = list(sliced_collections)
             for collection in sliced_collections:
-                flat_histories.extend(
-                    gi.histories.get_histories(
-                        history_id=collection['history_id']
-                    )
+                history_data = gi.histories.show_history(
+                    history_id=collection['history_id']
+                )
+                # remove large unneeded dict from data
+                del history_data['state_ids']
+                flat_histories.append(
+                    history_data
                 )
             if flat_histories:
                 out.write(template.format(
@@ -142,9 +145,9 @@ if __name__ == '__main__':
 
             for collection in sliced_collections:
                 history_id = collection['history_id']
-                history_name = gi.histories.get_histories(
+                history_name = gi.histories.show_history(
                     history_id=history_id
-                )[0]['name']
+                )['name']
                 for element in collection['elements']:
                     dataset_download_url = '/'.join([
                         part.strip('/') for part in [
