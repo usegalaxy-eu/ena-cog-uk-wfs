@@ -1,8 +1,8 @@
 import argparse
 import csv
-import sys
-import operator
 import os
+import re
+import sys
 
 from math import exp
 
@@ -37,17 +37,22 @@ if __name__ == '__main__':
         help='Columns to extract'
     )
     arguments.add_argument(
-        '-d', '--diagnostics', required=True, type=argparse.FileType('w'),
+        '-b', '--add-batch-id', action='store_true',
+        help='Add an additional column to the output representing the '
+             'analysis batch ID derived from each input filename'
+    )
+    arguments.add_argument(
+        '-d', '--diagnostics', type=argparse.FileType('w'),
         help='Output batch-level diagnostics to this TSV file'
     )
     arguments.add_argument(
-        '-P', '--position_field', default='POS',
+        '-P', '--position-field', default='POS',
         help='The name of variant table column which contains genomic variant '
              'position'
     )
     arguments.add_argument(
-        '-A', '--af_field', default='AF',
-        help='The name of variant table column which contains AF'
+        '-A', '--af-field', default='AF',
+        help='The name of the variant table column which contains AF'
     )
     arguments.add_argument(
         '-f', '--freq', type=float, default=0.25,
@@ -66,16 +71,17 @@ if __name__ == '__main__':
     )
     import_settings = arguments.parse_args()
 
-    # set up Poisson diagnostic stats output
-    genome_length = import_settings.genome_length
-    diag_annotation = csv.writer(
-        import_settings.diagnostics, delimiter='\t'
-    )
+    if import_settings.diagnostics:
+        # set up Poisson diagnostic stats output
+        genome_length = import_settings.genome_length
+        diag_annotation = csv.writer(
+            import_settings.diagnostics, delimiter='\t'
+        )
     if import_settings.headers:
         diag_annotation.writerow(['batch', 'N', 'error_rate', 'poisson_cut'])
 
     # set up main variants output
-    writer = csv.writer(sys.stdout, delimiter='\t')
+    writer = csv.writer(sys.stdout, delimiter='\t', lineterminator='\n')
     keep_in = {}
     headers = []
     shift = 0
@@ -98,6 +104,18 @@ if __name__ == '__main__':
                 hit_count = {}
                 # keep track of sample names
                 samples = set()
+                # if requested, extract first hexadecimal part of file name
+                # and store it for adiing it as the batch ID to rows
+                if import_settings.add_batch_id:
+                    try:
+                        extra_cols = [re.match('[a-f0-9]+', entry.name).group(0)]
+                    except AttributeError:
+                        sys.exit(
+                            'Failed to extract batch ID from file name: {0}'
+                            .format(entry.name)
+                        )
+                else:
+                    extra_cols = []
                 with open(entry.path) as itsv:
                     reader = csv.reader(itsv, delimiter='\t')
                     names = next(reader)
@@ -114,7 +132,7 @@ if __name__ == '__main__':
 
                     for row in reader:
                         samples.add(row[0])
-                        new_row = ['' for k in keep_in]
+                        new_row = ['' for k in field_mapper]
                         for i, o in field_mapper.items():
                             new_row[o] = row[i]
                         if len([k for k in field_filter if row[k[0]] != k[1]]) > 0:
@@ -126,52 +144,53 @@ if __name__ == '__main__':
                                 hit_count[pos] += 1
                             else:
                                 hit_count[pos] = 1
-
+                        new_row += extra_cols
                         writer.writerow(new_row)
 
-                # write Poisson stats for this file
-                # convert position=>hits into hits=># of positions
-                N = len(samples)
-                diag_row = [entry.name.split('_')[0], str(N), 'N/A', 'N/A']
-                if N >= 10:
-                    max_hits = max(
-                        hit_count.items(),
-                        key=operator.itemgetter(1)
-                    )[1]
-                    hit_array = [0 for k in range(max_hits+1)]
-                    hit_array[0] = genome_length - len(hit_count)
-                    for p, v in hit_count.items():
-                        hit_array[v] += 1
-                    ml_lambda = sum(
-                        [i * k for i, k in enumerate(hit_array)]
-                    ) / genome_length
-                    expected_counts = poissonSupport(
-                        ml_lambda, hit_array, genome_length
-                    )
-                    cutoff = 1
-                    for i, k in enumerate(hit_array):
-                        if i > len(expected_counts): break
-                        if k > 0:
-                            if (
-                                expected_counts[i] - k
-                            ) / expected_counts[i] < -1:
-                                break
-                            cutoff += 1
+                if import_settings.diagnostics:
+                    # write Poisson stats for this file
+                    # convert position=>hits into hits=># of positions
+                    N = len(samples)
+                    diag_row = [entry.name.split('_')[0], str(N), 'N/A', 'N/A']
+                    if N >= 10:
+                        max_hits = max(
+                            hit_count.items(),
+                            key=lambda x: x[1]
+                        )[1]
+                        hit_array = [0 for k in range(max_hits+1)]
+                        hit_array[0] = genome_length - len(hit_count)
+                        for p, v in hit_count.items():
+                            hit_array[v] += 1
+                        ml_lambda = sum(
+                            [i * k for i, k in enumerate(hit_array)]
+                        ) / genome_length
+                        expected_counts = poissonSupport(
+                            ml_lambda, hit_array, genome_length
+                        )
+                        cutoff = 1
+                        for i, k in enumerate(hit_array):
+                            if i > len(expected_counts): break
+                            if k > 0:
+                                if (
+                                    expected_counts[i] - k
+                                ) / expected_counts[i] < -1:
+                                    break
+                                cutoff += 1
 
-                    diag_row[2] = str(ml_lambda / genome_length)
-                    diag_row[3] = str(cutoff)
+                        diag_row[2] = str(ml_lambda / genome_length)
+                        diag_row[3] = str(cutoff)
 
-                    #print(expected_counts, file=sys.stderr)
-                    #print(hit_array, file=sys.stderr)
+                        #print(expected_counts, file=sys.stderr)
+                        #print(hit_array, file=sys.stderr)
 
-                    print(
-                        'ID %s: Poisson cutoff %d, error rate %g'
-                        % (
-                          entry.name.split('_')[0],
-                          cutoff,
-                          ml_lambda / genome_length
-                        ),
-                        file=sys.stderr
-                    )
+                        print(
+                            'ID %s: Poisson cutoff %d, error rate %g'
+                            % (
+                              entry.name.split('_')[0],
+                              cutoff,
+                              ml_lambda / genome_length
+                            ),
+                            file=sys.stderr
+                        )
 
-                diag_annotation.writerow(diag_row)
+                    diag_annotation.writerow(diag_row)
