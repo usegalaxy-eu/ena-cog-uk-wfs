@@ -12,7 +12,7 @@
 #new_history_tag: gx_variation
 #history_for_downloads: 96cd6d8191d4e3d6
 #metadata_history_tag: gx_meta
-#metadata_collection_name: Illumina ARTICv3 links
+#metadata_collection_name: Illumina ARTIC links
 #download_protocol: ftp
 
 ## Change only if you know what you're doing
@@ -24,15 +24,16 @@
 #batch_name: {collections[0][elements][0][element_identifier]}
 
 ARTIC primer BED:
+  # ARTICv4
   # This dataset is part of the published history
   # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
   class: File
-  galaxy_id: 11ac94870d0bb33ad57d463d2b9fd413
+  galaxy_id: 11ac94870d0bb33aaf1015859a1e5706
 ARTIC primers to amplicon assignments:
   # This dataset is part of the published history
   # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
   class: File
-  galaxy_id: 11ac94870d0bb33a27803f2f94a23aab
+  galaxy_id: 11ac94870d0bb33a66b03c26e54c2174
 NC_045512.2 FASTA sequence of SARS-CoV-2:
   # This dataset is part of the published history
   # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources

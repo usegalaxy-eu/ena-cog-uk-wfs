@@ -7,11 +7,13 @@ class ENAMetaSummary():
     def __init__(
         self, meta_in,
         filter_by_library_layout=None,
-        filter_by_library_strategy=None
+        filter_by_library_strategy=None,
+        check_fastqs=True
     ):
         self.meta_in = meta_in
         self.filter_by_library_layout = filter_by_library_layout
         self.filter_by_library_strategy = filter_by_library_strategy
+        self.check_fastqs = check_fastqs
         self.header = meta_in.readline()
         self.col_lookup = {
             name: idx for idx, name in enumerate(
@@ -30,23 +32,28 @@ class ENAMetaSummary():
                 self.skipped_records += 1
                 fields = line.split('\t')
                 if not fields[self.col_lookup['checklist']]:
+                    print('-', end='')
                     continue
                 coll_date = fields[self.col_lookup['collection_date']]
                 if coll_date == '2020-01-01' or not coll_date:
+                    print('!', end='')
                     continue
-
                 library_layout = fields[self.col_lookup['library_layout']]
                 library_strategy = fields[self.col_lookup['library_strategy']]
+                library_construction_protocol = fields[self.col_lookup['library_construction_protocol']]
                 link_field = fields[self.col_lookup['fastq_ftp']]
                 links = link_field.split(';')
-                if library_layout == 'SINGLE':
-                    if len(links) != 1:
-                        continue
-                elif library_layout == 'PAIRED':
-                    if len(links) < 2 or len(links) > 3:
-                        continue
-                    elif '_1' not in link_field or '_2' not in link_field:
-                        continue
+                if self.check_fastqs:
+                    if library_layout == 'SINGLE':
+                        if len(links) != 1:
+                            continue
+                    elif library_layout == 'PAIRED':
+                        if len(links) < 2 or len(links) > 3:
+                            print('o', end='')
+                            continue
+                        elif '_1' not in link_field or '_2' not in link_field:
+                            print('f', end='')
+                            continue
 
                 # record is technically ok
                 for feature in self.features_by_column:
@@ -63,6 +70,7 @@ class ENAMetaSummary():
                 # record is of a class that we want to keep
                 self.skipped_records -= 1
                 yield line
+        print()
 
     @property
     def sample_count(self):
@@ -73,12 +81,19 @@ def main(
     meta_in, meta_out,
     filter_by_library_layout=None,
     filter_by_library_strategy=None,
+    check_fastqs=True,
+    skip_dups=False,
     mod_func=None,
     verbose=True
 ):
     """Call this function from importing code that defines custom modifiers."""
 
-    s = ENAMetaSummary(meta_in, filter_by_library_layout)
+    s = ENAMetaSummary(
+        meta_in,
+        filter_by_library_layout,
+        filter_by_library_strategy,
+        check_fastqs
+    )
     if mod_func:
         it = mod_func(s)
     else:
@@ -98,7 +113,10 @@ def main(
         ]
         if duplicate_accs:
             print('Duplicates found!')
-            print('Duplicate accessions in retained records:', duplicate_accs)
+            print(
+                'Duplicate accessions in retained records:',
+                duplicate_accs
+            )
         else:
             print('OK')
 
@@ -110,6 +128,10 @@ def main(
         print('\tTypes of library strategies:')
         for strategy, count in s.features_by_column['library_strategy'].items():
             print(f'\t{strategy}\t{count}')
+
+        print('\tTypes of library construction protocols:')
+        for protocol, count in s.features_by_column['library_construction_protocol'].items():
+            print(f'\t{protocol}\t{count}')
 
         print('\tTypes of sequencing platforms:')
         for platform, count in s.features_by_column['instrument_platform'].items():
@@ -140,10 +162,15 @@ parser.add_argument(
     '--ls', '--library-strategy', default=None,
     help='Keep only records with this library_strategy field value '
          'e.g. "AMPLICON"'
-)    
-
+)
+parser.add_argument(
+    '--no-enforce-fastqs', action='store_false',
+    dest='check_fastqs',
+    help='Keep only records with this library_strategy field value '
+         'e.g. "AMPLICON"'
+)
 
 if __name__ == '__main__':
     args = parser.parse_args()
     with open(args.ifile) as i, open(args.ofile, 'w') as o:
-        _ = main(i, o, args.ll, args.ls)
+        _ = main(i, o, args.ll, args.ls, args.check_fastqs)
