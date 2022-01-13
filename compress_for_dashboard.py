@@ -36,6 +36,33 @@ def parse_compressed(in_json):
         yield sample, variant, af
 
 
+def get_record_iterator(
+    fh,
+    existing_compressed=None,
+    start_date=None, end_date=None
+):
+    if existing_compressed:
+        with open(existing_compressed) as i:
+            compressed_data = json.load(i)
+        record_it = itertools.chain(
+            parse_compressed(compressed_data),
+            parse_records(fh)
+        )
+    else:
+        record_it = parse_records(fh)
+    if start_date:
+        record_it = (
+            rec for rec in record_it
+            if sample_dates[rec[0]] >= start_date
+        )
+    if end_date:
+        record_it = (
+            rec for rec in record_it
+            if sample_dates[rec[0]] <= end_date
+        )
+    return record_it
+
+
 if __name__ == '__main__':
     arguments = argparse.ArgumentParser(
         description='Read a TSV file and compress it into a JSON with indexed '
@@ -44,16 +71,43 @@ if __name__ == '__main__':
         )
     arguments.add_argument(
         'input',
-        help='The TSV file to compress',
+        help='the TSV file to compress',
     )
     arguments.add_argument(
         'output',
-        help='The JSON file to compress the input file to',
+        help='file to write the compressed JSON output to',
     )
     arguments.add_argument(
         '-u', '--use-existing',
-        help='Update the indicated compressed JSON file. This is *not* an '
-             'in-place update, but will respect the output name provided.'
+        metavar='COMPRESSED_JSON',
+        help='Append to the content of the indicated compressed JSON file. '
+             'This is *not* an in-place update, but will respect the output '
+             'name provided.'
+        )
+    arguments.add_argument(
+        '-s', '--start-date',
+        metavar='ISO_DATE',
+        help='Only consider samples with a collection date after or equal '
+             'this date during compression.\n'
+             'Use --metadata-file to pass a file with collection dates of all '
+             'samples.'
+        )
+    arguments.add_argument(
+        '-e', '--end-date',
+        metavar='ISO_DATE',
+        help='Only consider samples with a collection date before or equal '
+             'this date during compression.\n'
+             'Use --metadata-file to pass a file with collection dates of all '
+             'samples.'
+        )
+    arguments.add_argument(
+        '-m', '--metadata-file',
+        help='Use to specify a file with sample collection dates.\n'
+             'The first two columns of this file are expected to be named '
+             '"run_accession" and "collection_date" with dates in the second '
+             'column specified as iso 8601 strings. Additional columns will '
+             'be ignored.\n'
+             'This option is required with --start-date and/or --end-date.'
         )
 
     # direct storage support not implemented yet!
@@ -67,9 +121,27 @@ if __name__ == '__main__':
     args = arguments.parse_args()
     # disable direct storage of values
     args.switch = 0
+    # require and read metadata file for handling dates
+    if args.start_date or args.end_date:
+        if not args.metadata_file:
+            sys.exit(
+                'A metadata file with collection dates for each sample is '
+                'required with --start-date and --end-date!'
+            )
+        print("Reading metadata file", file=sys.stderr)
+        with open(args.metadata_file) as i:
+            hdr_cols = i.readline().strip().split('\t')
+            if hdr_cols[:2] != ['run_accession', 'collection_date']:
+                sys.exit(
+                    'Expected metadata file with "run_accession" and '
+                    '"collection_date" as the first two column names!'
+                )
+            sample_dates = {}
+            for line in i:
+                fields = line.strip().split('\t')
+                sample_dates[fields[0]] = fields[1]
 
-
-    print ("Analyzing the TSV file", file = sys.stderr)
+    print("Analyzing the TSV file", file=sys.stderr)
     with open (args.input, "r") as fh:
         headers = fh.readline()
         fields = [
@@ -84,15 +156,10 @@ if __name__ == '__main__':
             k: Counter() for k in fields
         }
         l = 0
-        if args.use_existing:
-            with open(args.use_existing) as i:
-                compressed_data = json.load(i)
-            record_it = itertools.chain(
-                parse_compressed(compressed_data),
-                parse_records(fh)
-            )
-        else:
-            record_it = parse_records(fh)
+        record_it = get_record_iterator(
+            fh, args.use_existing, args.start_date, args.end_date
+        )
+
         for sample, variant, af in record_it:
             per_col_unique['sample'][sample] += 1
             per_col_unique['variant'][variant] += 1
@@ -109,33 +176,32 @@ if __name__ == '__main__':
             file = sys.stderr
         )
 
-        for k, v in per_col_unique.items():
-            ratio = l / len(v)
-            print(
-                "\tKey %s has %d unique values (%g compression)" % (
-                    k, len(v), ratio
-                ), file=sys.stderr
-            )
+        # all input data read, now encode parsed values
+        encoding = {}
+        for field, counter in per_col_unique.items():
+            if l > 0:
+                ratio = l / len(counter)
+                print(
+                    "\tKey %s has %d unique values (%g compression)" % (
+                        field, len(counter), ratio
+                    ), file=sys.stderr
+                )
+            else:
+                ratio = 1.0
             if ratio <= args.switch:
                 # This branch will currently never run because the compression
                 # part of the script wouldn't be able to handle it.
-                per_col_unique[k] = None
+                per_col_unique[field] = None
                 print(
                     "\t\tKey %s will be stored using direct values" % k,
                     file=sys.stderr
                 )
             else:
-                encoding = {}
-                for f in fields:
-                    encoding[f] = {
-                        k: index for index, k in enumerate(
-                            sorted(
-                                per_col_unique[f],
-                                key=lambda x: per_col_unique[f][x],
-                                reverse=True
-                            )
-                        )
-                    }
+                encoding[field] = {
+                    item[0]: index for index, item in enumerate(
+                        counter.most_common()
+                    )
+                }
 
     # At this point, encoding contains mappings of the form:
     # observed value in the input -> int to encode the value with
@@ -151,13 +217,9 @@ if __name__ == '__main__':
             'keys': []
         }
 
-        if args.use_existing:
-            record_it = itertools.chain(
-                parse_compressed(compressed_data),
-                parse_records(fh)
-            )
-        else:
-            record_it = parse_records(fh)
+        record_it = get_record_iterator(
+            fh, args.use_existing, args.start_date, args.end_date
+        )
 
         flat_values = []
         for sample, variant, af in record_it:
