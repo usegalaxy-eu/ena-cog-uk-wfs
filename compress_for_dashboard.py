@@ -109,7 +109,11 @@ if __name__ == '__main__':
              'be ignored.\n'
              'This option is required with --start-date and/or --end-date.'
         )
-
+    arguments.add_argument(
+        '--skip-header', action='store_true',
+        help='Indicate that the TSV input has a header line, which needs '
+             'to be skipped.'
+    )
     # direct storage support not implemented yet!
     # arguments.add_argument(
     #     '-s', '--switch',
@@ -142,8 +146,15 @@ if __name__ == '__main__':
                 sample_dates[fields[0]] = fields[1]
 
     print("Analyzing the TSV file", file=sys.stderr)
+    if not args.skip_header:
+        # file is not declared to have a header line
+        # => open it once and read first line solely for the
+        # purpose of getting a column count
+        with open (args.input, "r") as fh:
+            headers = fh.readline()
     with open (args.input, "r") as fh:
-        headers = fh.readline()
+        if args.skip_header:
+            headers = fh.readline()
         fields = [
             'sample', 'variant', 'pos', 'ref', 'alt',
             'af', 'effect', 'codon', 'trid', 'aa'
@@ -210,7 +221,8 @@ if __name__ == '__main__':
     print("Compressing to JSON", file=sys.stderr)
 
     with open(args.input, "r") as fh:
-        fh.readline()
+        if args.skip_header:
+            fh.readline()
         outputJSON = {
             'cols': headers,
             'rows': l,
