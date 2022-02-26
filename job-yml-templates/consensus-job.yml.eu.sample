@@ -1,5 +1,5 @@
 #use_server: https://usegalaxy.eu
-#use_workflow_id: 9abace7e8f37c69a
+#use_workflow_id: 06544e74f583fd05
 #new_history_name_suffix: Consensus
 #new_history_tag: cog-uk_consensus
 #bam_input_name: Fully processed reads for variant calling \(primer-trimmed, realigned reads with added indelquals\)
@@ -8,7 +8,7 @@
 #from_history_name: {histories[0][name]}
 #from_history_id: {histories[0][id]}
 
-min-AF for consensus variant: 0.7
+min-AF for consensus variant: 0.75
 min-AF for failed variants: 0.25
 Depth-threshold for masking: 10
 Variant calls:

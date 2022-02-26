@@ -102,6 +102,159 @@ def get_ena_meta_chunk(samples):
     return ret
 
 
+def get_seq_details(gi, history_id):
+    bwa_mem_jobs = gi.jobs.get_jobs(
+        state='ok',
+        history_id=history_id,
+        tool_id=[
+            'toolshed.g2.bx.psu.edu/repos/devteam/bwa/bwa_mem/0.7.17.1',
+            'toolshed.g2.bx.psu.edu/repos/devteam/bwa/bwa_mem/0.7.17.2'
+        ],
+        limit=1
+    )
+    minimap_jobs = gi.jobs.get_jobs(
+        state='ok',
+        history_id=history_id,
+        tool_id='toolshed.g2.bx.psu.edu/repos/iuc/minimap2/minimap2/2.17+galaxy2',
+        limit=1
+    )
+    assert len(bwa_mem_jobs) + len(minimap_jobs) == 1
+    if bwa_mem_jobs:
+        seq_platform = 'Illumina'
+    else:
+        seq_platform = 'ONT'
+    ivar_trim_jobs = gi.jobs.get_jobs(
+        state='ok',
+        history_id=history_id,
+        tool_id=[
+            'toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.3.1+galaxy2',
+            'toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.3.1+galaxy0',
+            'toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.2.2+galaxy1'
+        ],
+        limit=1
+    )
+    primer_scheme = gi.datasets.show_dataset(
+        gi.jobs.show_job(
+            ivar_trim_jobs[0]['id']
+        )['inputs']['input_bed']['id']
+    )['name']
+
+    return {
+        'platform': seq_platform,
+        'primer_scheme': primer_scheme
+    }
+
+
+def get_workflow_version(history_id, history_type, platform):
+    if history_type == 'variation':
+        if platform == 'Illumina':
+            if gi.jobs.get_jobs(
+                state='ok',
+                history_id=history_id,
+                tool_id='toolshed.g2.bx.psu.edu/repos/iuc/multiqc/multiqc/1.11+galaxy0',
+                limit=1
+            ):
+                return '0.5'
+            if gi.jobs.get_jobs(
+                state='ok',
+                history_id=history_id,
+                tool_id='toolshed.g2.bx.psu.edu/repos/iuc/multiqc/multiqc/1.9+galaxy1',
+                limit=1
+            ):
+                return '0.4'
+            if gi.jobs.get_jobs(
+                state='ok',
+                history_id=history_id,
+                tool_id='toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.3.1+galaxy0',
+                limit=1
+            ):
+                return '0.3'
+            if gi.datasets.get_datasets(
+                state='ok',
+                history_id=history_id,
+                name='Final (SnpEff-) annotated variants with strand-bias soft filter applied',
+                limit=1
+            ):
+                return '0.2'
+            return '0.1'
+        elif platform == 'ONT':
+            if gi.jobs.get_jobs(
+                state='ok',
+                history_id=history_id,
+                tool_id='toolshed.g2.bx.psu.edu/repos/iuc/multiqc/multiqc/1.11+galaxy0',
+                limit=1
+            ):
+                return '0.4'
+            if gi.jobs.get_jobs(
+                state='ok',
+                history_id=history_id,
+                tool_id='toolshed.g2.bx.psu.edu/repos/iuc/medaka_variant version 1.3.2+galaxy1',
+                limit=1
+            ):
+                return '0.3'
+            if gi.datasets.get_datasets(
+                state='ok',
+                history_id=history_id,
+                name='Final (SnpEff-) annotated variants with strand-bias soft filter applied',
+                limit=1
+            ):
+                return '0.2'
+            return '0.1'
+    elif history_type == 'report':
+        if gi.jobs.get_jobs(
+            state='ok',
+            history_id=history_id,
+            tool_id='toolshed.g2.bx.psu.edu/repos/iuc/snpsift/snpSift_extractFields/4.3.0',
+            limit=1
+        ):
+            return '0.1.3'
+        if gi.datasets.get_datasets(
+            state='ok',
+            history_id=history_id,
+            name='Extracted variants with filtered and renamed effects and AF recalculated',
+            limit=1
+        ):
+            return '0.2'
+        return '0.1'
+    elif history_type == 'consensus':
+        if gi.jobs.get_jobs(
+            state='ok',
+            history_id=history_id,
+            tool_id='toolshed.g2.bx.psu.edu/repos/nml/collapse_collections/collapse_dataset/5.1.0',
+            limit=1
+        ):
+            return '0.3'
+        if not gi.datasets.get_datasets(
+            state='ok',
+            history_id=history_id,
+            name='Called variants table',
+            limit=1
+        ):
+            return '0.2'
+        return '0.1'
+
+def add_batch_details(gi, discovered_batches):
+    for record in discovered_batches.values():
+        ids = COGUKSummary.get_record_history_ids(record)
+        # get seq platform and primer scheme info from
+        # variation history ID and update batch info with it
+        record.update(get_seq_details(gi, ids[0]))
+        # now get generating WF version from each type of history
+        # and update the corresponding info with it
+        for t, hid in zip(['variation', 'report', 'consensus'], ids):
+            if isinstance(record[t], str):
+                record[t] = {
+                    'history_link': record[t]
+                }
+            record[t].update(
+                {
+                    'workflow_version': get_workflow_version(
+                        hid, t, record['platform']
+                    )
+                }
+            )
+
+
 class COGUKSummary():
     """Represent a bot analysis summary.
 
@@ -114,7 +267,13 @@ class COGUKSummary():
     an update process.
     """
 
-    def __init__(self, summary=None, tags=None, exclude_tags=None):
+    def __init__(
+        self,
+        summary=None,
+        tags=None,
+        exclude_tags=None,
+        update_details_hook=None
+    ):
         """Create a new instance.
 
         Optionally, populate its `summary` from an existing summary dictionary.
@@ -144,14 +303,15 @@ class COGUKSummary():
                 'consensus': ['bot-published'],
                 'report': ['bot-published']
             }
+        self.update_details_hook = update_details_hook
 
     @classmethod
-    def from_file(cls, fname, tags=None, exclude_tags=None):
+    def from_file(cls, fname, **kwargs):
         """Create an instance and populate its summary from a JSON file."""
 
         with open(fname) as i:
             summary = json.load(i)
-        return cls(summary, tags, exclude_tags)
+        return cls(summary, **kwargs)
 
     @property
     def sample_count(self):
@@ -341,8 +501,21 @@ class COGUKSummary():
             return 0, new_data
 
         self._update_partial_data(gi, histories, new_data)
+        if self.update_details_hook:
+            self.update_details_hook(gi, new_data)
         self.summary.update(new_data)
         return len(new_data), self.__class__(new_data).get_problematic()
+
+    @staticmethod
+    def get_record_history_ids(record):
+        ret = []
+        for history_type in ['variation', 'report', 'consensus']:
+            if isinstance(record[history_type], str):
+                history_link = record[history_type]
+            else:
+                history_link = record[history_type].get('history_link')
+            ret.append(history_link.split('=')[-1] if history_link else None)
+        return ret
 
     def get_history_ids(self, history_type, gi=None):
         """Get the IDs of histories contained in the summary.
