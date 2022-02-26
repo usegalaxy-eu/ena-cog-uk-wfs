@@ -36,31 +36,55 @@ def parse_compressed(in_json):
         yield sample, variant, af
 
 
-def get_record_iterator(
-    fh,
-    existing_compressed=None,
-    start_date=None, end_date=None
+def get_records_in_timerange_iterator(
+    it, sample_dates=None, start_date=None, end_date=None
 ):
-    if existing_compressed:
-        with open(existing_compressed) as i:
-            compressed_data = json.load(i)
-        record_it = itertools.chain(
-            parse_compressed(compressed_data),
-            parse_records(fh)
-        )
-    else:
-        record_it = parse_records(fh)
     if start_date:
-        record_it = (
-            rec for rec in record_it
+        it = (
+            rec for rec in it
             if sample_dates[rec[0]] >= start_date
         )
     if end_date:
-        record_it = (
-            rec for rec in record_it
+        it = (
+            rec for rec in it
             if sample_dates[rec[0]] <= end_date
         )
-    return record_it
+    return it
+
+
+def record_iterator(
+    fh,
+    existing_compressed=None,
+    sample_dates=None,
+    start_date=None, end_date=None
+):
+    # Yield the records found in the tabular input stream,
+    # then the records in the previously compressed file, but
+    # let samples found in the new input overwrite previously
+    # compressed ones, i.e. skip records in existing compressed
+    # file if the sample has been seen in the new input stream
+    # already.
+    # Optionally, filter records by the collection date of their
+    # sample.
+    if existing_compressed:
+        with open(existing_compressed) as i:
+            compressed_data = json.load(i)
+        old_records_it = get_records_in_timerange_iterator(
+            parse_compressed(compressed_data),
+            sample_dates, start_date, end_date
+        )
+        seen_in_new = set()
+    new_records_it = get_records_in_timerange_iterator(
+        parse_records(fh), sample_dates, start_date, end_date
+    )
+    for record in new_records_it:
+        if existing_compressed:
+            seen_in_new.add(record[0])
+        yield record
+    if existing_compressed:
+        for record in old_records_it:
+            if record[0] not in seen_in_new:
+                yield record
 
 
 if __name__ == '__main__':
@@ -126,6 +150,7 @@ if __name__ == '__main__':
     # disable direct storage of values
     args.switch = 0
     # require and read metadata file for handling dates
+    sample_dates = {}
     if args.start_date or args.end_date:
         if not args.metadata_file:
             sys.exit(
@@ -140,7 +165,6 @@ if __name__ == '__main__':
                     'Expected metadata file with "run_accession" and '
                     '"collection_date" as the first two column names!'
                 )
-            sample_dates = {}
             for line in i:
                 fields = line.strip().split('\t')
                 sample_dates[fields[0]] = fields[1]
@@ -167,8 +191,8 @@ if __name__ == '__main__':
             k: Counter() for k in fields
         }
         l = 0
-        record_it = get_record_iterator(
-            fh, args.use_existing, args.start_date, args.end_date
+        record_it = record_iterator(
+            fh, args.use_existing, sample_dates, args.start_date, args.end_date
         )
 
         for sample, variant, af in record_it:
@@ -229,8 +253,8 @@ if __name__ == '__main__':
             'keys': []
         }
 
-        record_it = get_record_iterator(
-            fh, args.use_existing, args.start_date, args.end_date
+        record_it = record_iterator(
+            fh, args.use_existing, sample_dates, args.start_date, args.end_date
         )
 
         flat_values = []
