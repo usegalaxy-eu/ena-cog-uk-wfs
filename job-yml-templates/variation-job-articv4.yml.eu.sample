@@ -28,12 +28,12 @@ ARTIC primer BED:
   # This dataset is part of the published history
   # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
   class: File
-  galaxy_id: 11ac94870d0bb33aaf1015859a1e5706
+  galaxy_id: 11ac94870d0bb33ae00af10a70a3363f
 ARTIC primers to amplicon assignments:
   # This dataset is part of the published history
   # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
   class: File
-  galaxy_id: 11ac94870d0bb33a66b03c26e54c2174
+  galaxy_id: 11ac94870d0bb33aabed246d26f16c06
 NC_045512.2 FASTA sequence of SARS-CoV-2:
   # This dataset is part of the published history
   # https://usegalaxy.eu/u/wolfgang-maier/h/covid-19-resources
