@@ -1,0 +1,20 @@
+    track galaxyEna{quarter}{lineage}
+    parent {quarter}_tracks on
+    shortLabel {lineage_name} mutations
+    longLabel {longlabel}
+    html track_description
+    # the location of the data file, can be a full URL or just the filename, if the file is locate
+    # in the same directory as the hub.txt file
+    bigDataUrl data_{quarter}/{rank}_{lineage_name}_data.bb
+    # the format of the file. The number of fields needs to be specified for bigBed
+    # The "+" is important, it indicates that the file has more than 12 fields and that these
+    # should be shown on the click details page
+    type bigBed 8 +
+    priority {priority}
+    color {rgb}
+    # automatically switch off the track if the window size is 200kbp. Rarely needed, but useful if
+    # you show a ton of data or your files are on a very slow webserver
+    #maxWindowToDraw 200000
+    mouseOver $gene:$name | Nuc change: $nucChange | $lineage Frequency (this quarter): $withinLineageFrequency | Intrasample AF (this quarter): $medianAF ($q25AF - $q75AF) | First observed (ever): $earliestDateseen ($earliestCountryseen)
+    spectrum on
+

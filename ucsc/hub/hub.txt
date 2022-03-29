@@ -1,0 +1,7 @@
+hub CovidGalaxyProjectHub
+shortLabel GalaxyProject Covid Hub
+longLabel Hub for data from covid19.galaxyproject.org genome surveillance efforts
+genomesFile genomes.txt
+email maierw@informatik.uni-freiburg.de
+descriptionUrl track_description.html
+

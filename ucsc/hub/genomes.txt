@@ -1,0 +1,2 @@
+genome wuhCor1
+trackDb track.ra

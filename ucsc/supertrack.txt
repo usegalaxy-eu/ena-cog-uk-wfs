@@ -1,0 +1,9 @@
+track galaxyEna
+superTrack on
+shortLabel GalaxyProject SARS-CoV-2 mutations tracking
+longLabel The GalaxyProject's surveillance of SARS-CoV-2 mutations through consistent processing of public raw sequencing data
+descriptionUrl CovidGalaxyProjectHub.html
+type bed
+group varRep
+visibility dense
+

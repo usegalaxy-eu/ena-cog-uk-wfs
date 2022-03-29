@@ -1,0 +1,19 @@
+# the internal name, not visible in the UI, used for URL arguments. No special characters.
+track {quarter}_tracks
+parent galaxyEna
+shortLabel Galaxy ENA mutations in top lineages - {quarter_name}
+longLabel Most frequent lineages of {quarter_name}
+html track_description
+compositeTrack on
+type bigBed 8 +
+priority {priority}
+# color {rgb}
+allButtonPair on
+visibility {visibility}
+filterValues.countries EE|Estonia,GB|United Kingdom,GR|Greece,IE|Ireland,ZA|South Africa
+filterType.countries multipleListOr
+filterValuesDefault.countries EE,GB,GR,ZA
+filter.withinLineageFrequency 0.05
+filterByRange.withinLineageFrequency on
+filterLimits.withinLineageFrequency 0:2
+
