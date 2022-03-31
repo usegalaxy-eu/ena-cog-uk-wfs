@@ -55,9 +55,9 @@ class SampleSummary():
             for sample in batch_data['samples']:
                 if sample in assocs:
                     new_data_comp = (
-                        batch_data['variation']['workflow_version'].split('.'),
-                        batch_data['report']['workflow_version'].split('.'),
-                        batch_data['consensus']['workflow_version'].split('.'),
+                        batch_data['variation']['workflow_version'],
+                        batch_data['report']['workflow_version'],
+                        batch_data['consensus']['workflow_version'],
                         batch_data['time']
                     )
                     current_data = batched_sample_dict[assocs[sample]]
@@ -66,6 +66,7 @@ class SampleSummary():
                         current_data['report']['workflow_version'],
                         current_data['consensus']['workflow_version'],
                         current_data['time']
+                    )
                     if new_data_comp < current_data_comp:
                         # the batch that this sample is currently associated
                         # with represents a newer analysis than the incoming
