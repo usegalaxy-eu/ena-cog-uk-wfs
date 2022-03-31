@@ -303,7 +303,7 @@ class COGUKSummary():
                 'consensus': ['bot-published'],
                 'report': ['bot-published']
             }
-        self.update_details_hook = update_details_hook
+        self.update_details_hook = update_details_hook or add_batch_details
 
     @classmethod
     def from_file(cls, fname, **kwargs):
@@ -930,6 +930,16 @@ if __name__ == '__main__':
                     s.summary[k]['study_accession'] = '?'
 
     if args.format_tabular:
+        sorted_keys = sorted(
+            (k for k in s.summary),
+            key=lambda x: (
+                s.summary[x]['variation']['workflow_version'].split('.'),
+                s.summary[x]['report']['workflow_version'].split('.'),
+                s.summary[x]['consensus']['workflow_version'].split('.'),
+                s.summary[x]['time']
+            ),
+            reverse=True
+        )
         with open(args.ofile, 'w') as o:
             print(
                 'run_accession',
@@ -941,12 +951,13 @@ if __name__ == '__main__':
                 file=o
             )
 
-            for v in s.summary.values():
+            for k in sorted_keys:
+                v = s.summary[k]
                 if 'samples' not in v:
                     continue
                 coll_dates = v.get(
                     'collection_dates',
-                    [''] *len(v['samples'])
+                    [''] * len(v['samples'])
                 )
                 comp_date = v.get('time', '').split('T')[0]
                 study_acc = v.get('study_accession', '')
@@ -956,6 +967,9 @@ if __name__ == '__main__':
                         sample,
                         coll_date,
                         comp_date,
+                        v['variation']['workflow_version'],
+                        v['report']['workflow_version'],
+                        v['consensus']['workflow_version'],
                         study_acc,
                         v['batch_id'],
                         sep='\t',
