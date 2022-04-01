@@ -242,6 +242,10 @@ def add_batch_details(gi, discovered_batches):
         # now get generating WF version from each type of history
         # and update the corresponding info with it
         for t, hid in zip(['variation', 'report', 'consensus'], ids):
+            if hid is None:
+                # no corresponding analysis history is known
+                # => nothing to conclude
+                continue
             if isinstance(record[t], str):
                 record[t] = {
                     'history_link': record[t]
@@ -510,6 +514,9 @@ class COGUKSummary():
     def get_record_history_ids(record):
         ret = []
         for history_type in ['variation', 'report', 'consensus']:
+            if history_type not in record:
+                ret.append(None)
+                continue
             if isinstance(record[history_type], str):
                 history_link = record[history_type]
             else:
