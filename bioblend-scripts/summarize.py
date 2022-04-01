@@ -235,7 +235,7 @@ def get_workflow_version(history_id, history_type, platform):
 
 def add_batch_details(gi, discovered_batches):
     for record in discovered_batches.values():
-        ids = COGUKSummary.get_record_history_ids(record)
+        ids = COGUKSummary.get_record_history_ids(record, gi)
         # get seq platform and primer scheme info from
         # variation history ID and update batch info with it
         record.update(get_seq_details(gi, ids[0]))
@@ -511,7 +511,7 @@ class COGUKSummary():
         return len(new_data), self.__class__(new_data).get_problematic()
 
     @staticmethod
-    def get_record_history_ids(record):
+    def get_record_history_ids(record, gi):
         ret = []
         for history_type in ['variation', 'report', 'consensus']:
             if history_type not in record:
@@ -521,7 +521,11 @@ class COGUKSummary():
                 history_link = record[history_type]
             else:
                 history_link = record[history_type].get('history_link')
-            ret.append(history_link.split('=')[-1] if history_link else None)
+            ret.append(
+                history_link.split('=')[-1]
+                if history_link and history_link.startswith(gi.base_url) else
+                None
+            )
         return ret
 
     def get_history_ids(self, history_type, gi=None):
@@ -815,12 +819,16 @@ if __name__ == '__main__':
         # If they are in an ok state, then everything before must be so, too.
         completed = {}
         for k, v in s.summary.items():
+            # get the IDs of the variation, the report, and the consensus
+            # histories in thise order
+            # if any history is missing or is not located on the targeted
+            # server, None will be used as a placeholder
+            ids = COGUKSummary.get_record_history_ids(v, gi)
             # skip incomplete records without proper report info
             # and records that are not available from the current
             # Galaxy instance
-            if 'report' not in v or 'datamonkey_link' not in v['report']:
-                continue
-            if not v['report']['history_link'].startswith(gi.base_url):
+            report_history_id = ids[1]
+            if not report_history_id or 'datamonkey_link' not in v['report']:
                 continue
 
             dataset_id = v['report']['datamonkey_link'].split('/')[-2]
@@ -828,16 +836,16 @@ if __name__ == '__main__':
             if dataset_info['state'] != 'ok':
                 print(
                     'Skipping record for which by-sample report is not ready:',
-                    v['report']['history_link'],
+                    report_history_id,
                     '(state: "{0}")'.format(dataset_info['state'])
                 )
                 continue
             if args.completed_only:
                 # --check-data-availability does not care about the
                 # consensus history state, but --completed-only does.
-                if not v.get('consensus', '').startswith(gi.base_url):
+                consensus_history_id = ids[2]
+                if not consensus_history_id:
                     continue
-                consensus_history_id = v['consensus'].split('id=')[-1]
                 dataset_info = show_matching_dataset_info(
                     gi, consensus_history_id,
                     ['Multisample consensus FASTA'],
@@ -847,7 +855,7 @@ if __name__ == '__main__':
                 if dataset_info['state'] != 'ok':
                     print(
                         'Skipping record for which multi-sample fasta is not ready:',
-                        v['consensus'],
+                        consensus_history_id,
                         '(state: "{0}")'.format(dataset_info['state'])
                     )
                     continue
