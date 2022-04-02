@@ -851,12 +851,16 @@ if __name__ == '__main__':
                     ['Multisample consensus FASTA'],
                     types=['dataset'],
                     include_invocation_inputs=False
-                )[0][0]
-                if dataset_info['state'] != 'ok':
+                )[0]
+                if not dataset_info or dataset_info[0]['state'] != 'ok':
                     print(
                         'Skipping record for which multi-sample fasta is not ready:',
                         consensus_history_id,
-                        '(state: "{0}")'.format(dataset_info['state'])
+                        '(state: "{0}")'.format(
+                            dataset_info[0]['state']
+                            if dataset_info else
+                            'dataset not found'
+                        )
                     )
                     continue
             completed[k] = v
