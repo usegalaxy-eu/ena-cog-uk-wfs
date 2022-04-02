@@ -400,7 +400,7 @@ for n, lineage_data in enumerate(lineage_dict.items()):
                 variant_effects[variant]['EFFECT'],
                 variant_effects[variant]['TRID'],
             )
-            line_to_write += '{:.2f}\t{:.2f}\t{:.2f}\t{}\t{:.2f}\t{}\t{}\t{}\t'.format(
+            line_to_write += '{:.2f}\t{:.2f}\t{:.2f}\t{}\t{:.3f}\t{}\t{}\t{}\t'.format(
                 af_median, af_q25, af_q75,
                 lineage,
                 variant_lineage_frequency,
