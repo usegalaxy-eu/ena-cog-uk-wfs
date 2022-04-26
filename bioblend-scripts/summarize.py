@@ -454,7 +454,7 @@ class COGUKSummary():
             if not annotated_vars_info:
                 continue
 
-            if annotated_vars_info['history_id'] == history['id']:
+            if annotated_vars_info[0]['history_id'] == history['id']:
                 variation_from = gi.histories.show_dataset_collection(
                     history['id'],
                     annotated_vars_info[0]['id']
@@ -464,7 +464,7 @@ class COGUKSummary():
                 # history's invocation inputs and is linked directly from
                 # the variation history.
                 # No need to look into collection elements anymore.
-                variation_from = annotated_vars_info['history_id']
+                variation_from = annotated_vars_info[0]['history_id']
 
             if variation_from in partial_data:
                 if 'consensus' in partial_data:
