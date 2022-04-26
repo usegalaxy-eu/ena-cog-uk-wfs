@@ -382,10 +382,17 @@ class COGUKSummary():
             annotated_vars, by_sample_report, batch_plot = [
                 d[0] for d in key_data
             ]
-            vcf_elements = gi.histories.show_dataset_collection(
-                history['id'], annotated_vars['id']
-            )['elements']
-            variation_from = vcf_elements[0]['object']['history_id']
+            if annotated_vars['history_id'] == history['id']:
+                vcf_elements = gi.histories.show_dataset_collection(
+                    history['id'], annotated_vars['id']
+                )['elements']
+                variation_from = vcf_elements[0]['object']['history_id']
+            else:
+                # This annotated_vars collection was found in the report
+                # history's invocation inputs and is linked directly from
+                # the variation history.
+                # No need to look into collection elements anymore.
+                variation_from = annotated_vars['history_id']
 
             if variation_from in partial_data:
                 if 'report' in partial_data:
@@ -440,10 +447,17 @@ class COGUKSummary():
             if not annotated_vars_info:
                 continue
 
-            variation_from = gi.histories.show_dataset_collection(
-                history['id'],
-                annotated_vars_info[0]['id']
-            )['elements'][0]['object']['history_id']
+            if annotated_vars_info['history_id'] == history['id']:
+                variation_from = gi.histories.show_dataset_collection(
+                    history['id'],
+                    annotated_vars_info[0]['id']
+                )['elements'][0]['object']['history_id']
+            else:
+                # This annotated_vars collection was found in the consensus
+                # history's invocation inputs and is linked directly from
+                # the variation history.
+                # No need to look into collection elements anymore.
+                variation_from = annotated_vars_info['history_id']
 
             if variation_from in partial_data:
                 if 'consensus' in partial_data:
