@@ -8,14 +8,17 @@ mv bioblend-scripts/summarize.patched bioblend-scripts/summarize.py &&
 curl -o last_processed.json ftp://xfer13.crg.eu/gx-surveillance.json &&
 
 # generate json with info about new histories discovered on usegalaxy.eu
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Discovering new variation/report/consensus history triplets on usegalaxy.eu ..." &&
 python bioblend-scripts/summarize.py -g "https://usegalaxy.eu" -a $API_KEY -u last_processed.json --discover-new-data --write-new-only -o new_eu.json &&
 
 # retrieve ENA metadata for new samples with completed analysis and add them to a combined JSON
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Checking for completed report and consensus histories in discovered triplets and retrieving ENA metadata for their samples ..." &&
 python bioblend-scripts/summarize.py -g "https://usegalaxy.eu" -a $API_KEY -u new_eu.json --completed-only --retrieve-meta -o new_combined.json &&
 
 
 # ************** COG-UK data extraction ******************
 # +++ get previous results +++
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data for COG-UK and appending it to existing data ... " &&
 curl -o last_cog_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB37886.json.gz &&
 gzip -d last_cog_variants.json.gz &&
 # download COG-UK by-sample reports from .eu and .org
@@ -32,6 +35,7 @@ rm last_cog_variants.json &&
 
 # ************** Greek data extraction ******************
 # +++ get previous results +++
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from Greece and appending it to existing data ... " &&
 curl -o last_greek_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB44141.json.gz &&
 gzip -d last_greek_variants.json.gz &&
 # download PRJEB44141 by-sample reports from .eu and .org
@@ -47,6 +51,7 @@ rm last_greek_variants.json &&
 
 # ************** Irish data extraction ******************
 # +++ get previous results +++
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from Ireland and appending it to existing data ... " &&
 curl -o last_irish_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB40277.json.gz &&
 gzip -d last_irish_variants.json.gz &&
 # download PRJEB40277 by-sample reports from .eu and .org
@@ -62,6 +67,7 @@ rm last_irish_variants.json &&
 
 # ************** Estonian data extraction ******************
 # +++ get previous results +++
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from Estonia and appending it to existing data ... " &&
 curl -o last_ee_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_Estonia.json.gz &&
 gzip -d last_ee_variants.json.gz &&
 # get Estonian study accessions from the ENA
@@ -79,6 +85,7 @@ rm last_ee_variants.json &&
 
 # ************** South African data extraction ******************
 # +++ get previous results +++
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from South Africa and appending it to existing data ... " &&
 curl -o last_sa_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJNA636748.json.gz &&
 gzip -d last_sa_variants.json.gz &&
 # download PRJNA636748 by-sample reports from .eu and .org
@@ -93,6 +100,7 @@ rm -R PRJNA636748_reports &&
 rm last_sa_variants.json &&
 
 # ************ combine files and create custom observable files ************
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Cobining data and creating observable files ... " &&
 # combine per-project json files, then merge with pre-existing json adding in possibly missing metadata for any record
 python bioblend-scripts/summarize.py -u new_PRJEB37886.json new_PRJEB44141.json new_PRJEB40277.json new_Estonia.json new_PRJNA636748.json -o new_combined.json &&
 python bioblend-scripts/summarize.py -u last_processed.json new_combined.json --retrieve-meta -o updated.json &&
@@ -153,6 +161,7 @@ for file in variants_PRJNA636748*.json; do gzip $file; done &&
 
 # ************* FTP uploads **************
 # push updated versions of all files to the FTP server
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Pushing data back to FTP server ... " &&
 # the full json of everything ever processed
 curl --user $USER_ID:$USER_PASSWORD -T updated.json ftp://xfer.crg.eu/userspace/results/gx-surveillance.json &&
 # append the new poisson stats to previous results on server
@@ -208,8 +217,10 @@ curl --user $USER_ID:$USER_PASSWORD -T meta_PRJNA636748.tsv.gz ftp://xfer.crg.eu
 # - have been newly discovered in this script run 
 # - represent completed analyses (--completed-only)
 # - belong to one of the explicitly queried study_accessions above according to their ENA metadata
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Making newly discovered and successfully processed histories accessible ... " &&
 python bioblend-scripts/summarize.py -g "https://usegalaxy.eu" -a $API_KEY -u new_combined.json --make-accessible -o new_eu.json &&
 
 # ************ Done !! *************
 # list public contents to confirm
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Success! Listing Contents on FTP server ..." &&
 curl ftp://xfer13.crg.eu
