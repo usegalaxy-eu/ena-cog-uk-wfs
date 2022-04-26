@@ -393,11 +393,18 @@ class COGUKSummary():
                 # the variation history.
                 # No need to look into collection elements anymore.
                 variation_from = annotated_vars['history_id']
+                # postpone collection element extraction until we know
+                # that we want to use this history
+                vcf_elements = None
 
             if variation_from in partial_data:
                 if 'report' in partial_data:
                     ids_with_duplicated_reports.add(variation_from)
                 else:
+                    if vcf_elements is None:
+                        vcf_elements = gi.histories.show_dataset_collection(
+                            history['id'], annotated_vars['id']
+                        )['elements']
                     sample_names = [e['element_identifier'] for e in vcf_elements]
                     partial_data[variation_from]['samples'] = sample_names
                     partial_data[variation_from]['time'] = by_sample_report['create_time']
