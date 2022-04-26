@@ -867,12 +867,10 @@ if __name__ == '__main__':
                 consensus_history_id = ids[2]
                 if not consensus_history_id:
                     continue
-                dataset_info = show_matching_dataset_info(
-                    gi, consensus_history_id,
-                    ['Multisample consensus FASTA'],
-                    types=['dataset'],
-                    include_invocation_inputs=False
-                )[0]
+                dataset_info = gi.datasets.get_datasets(
+                    history_id=consensus_history_id,
+                    name='Multisample consensus FASTA'
+                )
                 if not dataset_info or dataset_info[0]['state'] != 'ok':
                     print(
                         'Skipping record for which multi-sample fasta is not ready:',
