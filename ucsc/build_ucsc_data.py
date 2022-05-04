@@ -232,7 +232,7 @@ with gzip.open(args.lineage_fn, 'rt') as pango_in:
 
 records_with_lineages = {
     k: v for k, v in sample_info.items()
-    if v.get('lineage') and v['lineage'] != 'None'
+    if v.get('lineage') and v['lineage'] != 'Unassigned'
 }
 print(
     'Lineage assignments found for {0} samples'
