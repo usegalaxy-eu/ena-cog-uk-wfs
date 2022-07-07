@@ -9,7 +9,7 @@ import yaml
 
 from collections import Counter
 
-from bioblend import galaxy
+from bioblend import galaxy, ConnectionError
 
 
 NON_OK_TERMINAL_STATES = {
@@ -59,9 +59,13 @@ def upload_from_links(links, gi, history_id, upload_attempts, timeout):
         all_ok = True
         for link in links:
             if links_states[link]['status'] != 'ok':
-                links_states[link]['status'] = gi.datasets.show_dataset(
-                    links_dataset_ids[link]
-                )['state']
+                try:
+                    links_states[link]['status'] = gi.datasets.show_dataset(
+                        links_dataset_ids[link]
+                    )['state']
+                except ConnectionError:
+                    # treat connection errors like a still not ok state
+                    pass
                 if links_states[link]['status'] != 'ok':
                     all_ok = False
                     if links_states[link]['status'] == 'running':
