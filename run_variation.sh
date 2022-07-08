@@ -59,9 +59,9 @@ python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINK
 # but we still want a way to identify links that haven't been analyzed.
 trap 'python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL4 -r $BOT_SIGNAL1' err &&
 # download the data and add information about the collection to be built from it to the job yml file
-INPUT_COLLECTION='Input Collection'
+INPUT_COLLECTION='Input Collection' &&
 python bioblend-scripts/ftp_links_to_yaml.py $ENA_LINKS "$INPUT_COLLECTION" -i $DOWNLOAD_HISTORY -p $DEFAULT_PROTOCOL -g "$GALAXY_SERVER" -a $API_KEY >> "$WORKDIR/$JOB_YML" &&
-echo "Data upload complete!"
+echo "Data upload complete!" &&
 # for the following replacements in the job yml file
 # we need to move the current version to a temporary file
 mv "$WORKDIR/$JOB_YML" "$WORKDIR/$JOB_YML".tmp &&
@@ -70,26 +70,26 @@ mv "$WORKDIR/$JOB_YML" "$WORKDIR/$JOB_YML".tmp &&
 if grep "list:paired" "$WORKDIR/$JOB_YML".tmp; then
     WF_ID=$(grep '#pe_workflow_id:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
     INPUT_REPLACE=$(grep '#pe_collection_name:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
-    sed "s/$INPUT_COLLECTION:/$INPUT_REPLACE:/" "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML" &&
+    sed "s/$INPUT_COLLECTION:/$INPUT_REPLACE:/" "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML"
 else
-    NUM_LIST_LIST=$(grep -c "list:list" "$WORKDIR/$JOB_YML".tmp)
+    NUM_LIST_LIST=$(grep -c "list:list" "$WORKDIR/$JOB_YML".tmp) &&
     if [ $NUM_LIST_LIST -eq 2 ]; then
         WF_ID=$(grep '#nested_pe_workflow_id:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
         INPUT_REPLACE_FW=$(grep '#nested_pe_collection_name_fw:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
         INPUT_REPLACE_RV=$(grep '#nested_pe_collection_name_rv:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
-        sed "s/""$INPUT_COLLECTION""_fw:/$INPUT_REPLACE_FW:/;s/""$INPUT_COLLECTION""_rv:/$INPUT_REPLACE_RV:/" && "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML"
+        sed "s/""$INPUT_COLLECTION""_fw:/$INPUT_REPLACE_FW:/;s/""$INPUT_COLLECTION""_rv:/$INPUT_REPLACE_RV:/" "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML"
     elif [ $NUM_LIST_LIST -eq 1 ]; then
         WF_ID=$(grep '#nested_se_workflow_id:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
         INPUT_REPLACE=$(grep '#nested_se_collection_name:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
-        sed "s/$INPUT_COLLECTION:/$INPUT_REPLACE:/" "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML" &&
+        sed "s/$INPUT_COLLECTION:/$INPUT_REPLACE:/" "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML"
     else
-        WF_ID=$(grep '#se_workflow_id:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-)
+        WF_ID=$(grep '#se_workflow_id:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
         INPUT_REPLACE=$(grep '#se_collection_name:' "$WORKDIR/$JOB_YML".tmp | cut -d ' ' -f 2-) &&
-        sed "s/$INPUT_COLLECTION:/$INPUT_REPLACE:/" "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML" &&
+        sed "s/$INPUT_COLLECTION:/$INPUT_REPLACE:/" "$WORKDIR/$JOB_YML".tmp > "$WORKDIR/$JOB_YML"
     fi
 fi
 # data should be downloaded at this point, time to let planemo handle the rest!
-python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL2 -r $BOT_SIGNAL1 &&
+&& python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL2 -r $BOT_SIGNAL1 &&
 # bot-downloading tag has been removed from links dataset, no need to handle this on errors anymore
 trap - err &&
 # run the WF
