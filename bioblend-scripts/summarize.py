@@ -235,13 +235,17 @@ def get_workflow_version(history_id, history_type, platform):
 
 def add_batch_details(gi, discovered_batches):
     for record in discovered_batches.values():
-        ids = COGUKSummary.get_record_history_ids(record)
+        ids = COGUKSummary.get_record_history_ids(record, gi)
         # get seq platform and primer scheme info from
         # variation history ID and update batch info with it
         record.update(get_seq_details(gi, ids[0]))
         # now get generating WF version from each type of history
         # and update the corresponding info with it
         for t, hid in zip(['variation', 'report', 'consensus'], ids):
+            if hid is None:
+                # no corresponding analysis history is known
+                # => nothing to conclude
+                continue
             if isinstance(record[t], str):
                 record[t] = {
                     'history_link': record[t]
@@ -303,7 +307,7 @@ class COGUKSummary():
                 'consensus': ['bot-published'],
                 'report': ['bot-published']
             }
-        self.update_details_hook = update_details_hook
+        self.update_details_hook = update_details_hook or add_batch_details
 
     @classmethod
     def from_file(cls, fname, **kwargs):
@@ -378,15 +382,29 @@ class COGUKSummary():
             annotated_vars, by_sample_report, batch_plot = [
                 d[0] for d in key_data
             ]
-            vcf_elements = gi.histories.show_dataset_collection(
-                history['id'], annotated_vars['id']
-            )['elements']
-            variation_from = vcf_elements[0]['object']['history_id']
+            if annotated_vars['history_id'] == history['id']:
+                vcf_elements = gi.histories.show_dataset_collection(
+                    history['id'], annotated_vars['id']
+                )['elements']
+                variation_from = vcf_elements[0]['object']['history_id']
+            else:
+                # This annotated_vars collection was found in the report
+                # history's invocation inputs and is linked directly from
+                # the variation history.
+                # No need to look into collection elements anymore.
+                variation_from = annotated_vars['history_id']
+                # postpone collection element extraction until we know
+                # that we want to use this history
+                vcf_elements = None
 
             if variation_from in partial_data:
                 if 'report' in partial_data:
                     ids_with_duplicated_reports.add(variation_from)
                 else:
+                    if vcf_elements is None:
+                        vcf_elements = gi.histories.show_dataset_collection(
+                            history['id'], annotated_vars['id']
+                        )['elements']
                     sample_names = [e['element_identifier'] for e in vcf_elements]
                     partial_data[variation_from]['samples'] = sample_names
                     partial_data[variation_from]['time'] = by_sample_report['create_time']
@@ -436,10 +454,17 @@ class COGUKSummary():
             if not annotated_vars_info:
                 continue
 
-            variation_from = gi.histories.show_dataset_collection(
-                history['id'],
-                annotated_vars_info[0]['id']
-            )['elements'][0]['object']['history_id']
+            if annotated_vars_info[0]['history_id'] == history['id']:
+                variation_from = gi.histories.show_dataset_collection(
+                    history['id'],
+                    annotated_vars_info[0]['id']
+                )['elements'][0]['object']['history_id']
+            else:
+                # This annotated_vars collection was found in the consensus
+                # history's invocation inputs and is linked directly from
+                # the variation history.
+                # No need to look into collection elements anymore.
+                variation_from = annotated_vars_info[0]['history_id']
 
             if variation_from in partial_data:
                 if 'consensus' in partial_data:
@@ -507,14 +532,21 @@ class COGUKSummary():
         return len(new_data), self.__class__(new_data).get_problematic()
 
     @staticmethod
-    def get_record_history_ids(record):
+    def get_record_history_ids(record, gi):
         ret = []
         for history_type in ['variation', 'report', 'consensus']:
+            if history_type not in record:
+                ret.append(None)
+                continue
             if isinstance(record[history_type], str):
                 history_link = record[history_type]
             else:
                 history_link = record[history_type].get('history_link')
-            ret.append(history_link.split('=')[-1] if history_link else None)
+            ret.append(
+                history_link.split('=')[-1]
+                if history_link and history_link.startswith(gi.base_url) else
+                None
+            )
         return ret
 
     def get_history_ids(self, history_type, gi=None):
@@ -808,12 +840,16 @@ if __name__ == '__main__':
         # If they are in an ok state, then everything before must be so, too.
         completed = {}
         for k, v in s.summary.items():
+            # get the IDs of the variation, the report, and the consensus
+            # histories in thise order
+            # if any history is missing or is not located on the targeted
+            # server, None will be used as a placeholder
+            ids = COGUKSummary.get_record_history_ids(v, gi)
             # skip incomplete records without proper report info
             # and records that are not available from the current
             # Galaxy instance
-            if 'report' not in v or 'datamonkey_link' not in v['report']:
-                continue
-            if not v['report']['history_link'].startswith(gi.base_url):
+            report_history_id = ids[1]
+            if not report_history_id or 'datamonkey_link' not in v['report']:
                 continue
 
             dataset_id = v['report']['datamonkey_link'].split('/')[-2]
@@ -821,27 +857,29 @@ if __name__ == '__main__':
             if dataset_info['state'] != 'ok':
                 print(
                     'Skipping record for which by-sample report is not ready:',
-                    v['report']['history_link'],
+                    report_history_id,
                     '(state: "{0}")'.format(dataset_info['state'])
                 )
                 continue
             if args.completed_only:
                 # --check-data-availability does not care about the
                 # consensus history state, but --completed-only does.
-                if not v.get('consensus', '').startswith(gi.base_url):
+                consensus_history_id = ids[2]
+                if not consensus_history_id:
                     continue
-                consensus_history_id = v['consensus'].split('id=')[-1]
-                dataset_info = show_matching_dataset_info(
-                    gi, consensus_history_id,
-                    ['Multisample consensus FASTA'],
-                    types=['dataset'],
-                    include_invocation_inputs=False
-                )[0][0]
-                if dataset_info['state'] != 'ok':
+                dataset_info = gi.datasets.get_datasets(
+                    history_id=consensus_history_id,
+                    name='Multisample consensus FASTA'
+                )
+                if not dataset_info or dataset_info[0]['state'] != 'ok':
                     print(
                         'Skipping record for which multi-sample fasta is not ready:',
-                        v['consensus'],
-                        '(state: "{0}")'.format(dataset_info['state'])
+                        consensus_history_id,
+                        '(state: "{0}")'.format(
+                            dataset_info[0]['state']
+                            if dataset_info else
+                            'dataset not found'
+                        )
                     )
                     continue
             completed[k] = v
@@ -930,23 +968,37 @@ if __name__ == '__main__':
                     s.summary[k]['study_accession'] = '?'
 
     if args.format_tabular:
+        sorted_keys = sorted(
+            (k for k in s.summary),
+            key=lambda x: (
+                s.summary[x]['variation']['workflow_version'].split('.'),
+                s.summary[x]['report']['workflow_version'].split('.'),
+                s.summary[x]['consensus']['workflow_version'].split('.'),
+                s.summary[x]['time']
+            ),
+            reverse=True
+        )
         with open(args.ofile, 'w') as o:
             print(
                 'run_accession',
                 'collection_date',
                 'completed_date',
+                'variation_wf_version',
+                'reporting_wf_version',
+                'consensus_wf_version',
                 'study_accession',
                 'batch_id',
                 sep='\t',
                 file=o
             )
 
-            for v in s.summary.values():
+            for k in sorted_keys:
+                v = s.summary[k]
                 if 'samples' not in v:
                     continue
                 coll_dates = v.get(
                     'collection_dates',
-                    [''] *len(v['samples'])
+                    [''] * len(v['samples'])
                 )
                 comp_date = v.get('time', '').split('T')[0]
                 study_acc = v.get('study_accession', '')
@@ -956,6 +1008,9 @@ if __name__ == '__main__':
                         sample,
                         coll_date,
                         comp_date,
+                        v['variation']['workflow_version'],
+                        v['report']['workflow_version'],
+                        v['consensus']['workflow_version'],
                         study_acc,
                         v['batch_id'],
                         sep='\t',
