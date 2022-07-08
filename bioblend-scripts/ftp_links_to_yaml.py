@@ -13,7 +13,10 @@ from bioblend import galaxy, ConnectionError
 
 
 NON_OK_TERMINAL_STATES = {
-    'empty', 'error', 'discarded', 'failed_metadata', 'paused'
+    # dataset states that will not change on the Galaxy side
+    # the empty string represents a dataset for which we haven't requested
+    # an upload yet from Galaxy
+    '', 'error', 'discarded', 'failed_metadata', 'paused'
 }
 
 
@@ -23,7 +26,7 @@ def upload_from_links(links, gi, history_id, upload_attempts, timeout):
     links_states = {}
     for link in links:
         links_states[link] = {
-            'status': 'empty',
+            'status': '',
             'attempts_left': upload_attempts
         }
 
@@ -52,6 +55,7 @@ def upload_from_links(links, gi, history_id, upload_attempts, timeout):
                     links_dataset_ids[link] = r['outputs'][0]['id']
                     links_states[link]['job_id'] = r['jobs'][0]['id']
                     links_states[link]['attempts_left'] -= 1
+                    links_states[link]['status'] = 'new'
                 else:
                     raise ConnectionError(
                         'Some datasets did not upload successfully after the '
@@ -91,7 +95,7 @@ def upload_from_links(links, gi, history_id, upload_attempts, timeout):
                         # => cancel the upload job and flag the link as
                         # requiring a new upload attempt
                         gi.jobs.cancel_job(links_states[link]['job_id'])
-                        links_states[link]['status'] = 'empty'
+                        links_states[link]['status'] = ''
                         links_states[link].pop('running_since')
         if all_ok:
             return links_dataset_ids
