@@ -57,7 +57,7 @@ python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINK
 # from here on make sure we replace the bot-downloading tag with one saying bot-failed if something
 # goes wrong cause a left-behind bot-downloading tag will prevent future bot runs,
 # but we still want a way to identify links that haven't been analyzed.
-trap 'python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL4 -r $BOT_SIGNAL1' err &&
+trap 'python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL4 -r $BOT_SIGNAL1; exit 1' err &&
 # download the data and add information about the collection to be built from it to the job yml file
 INPUT_COLLECTION='Input Collection' &&
 python bioblend-scripts/ftp_links_to_yaml.py $ENA_LINKS "$INPUT_COLLECTION" -i $DOWNLOAD_HISTORY -p $DEFAULT_PROTOCOL -g "$GALAXY_SERVER" -a $API_KEY >> "$WORKDIR/$JOB_YML" &&
@@ -89,7 +89,7 @@ else
     fi
 fi
 # data should be downloaded at this point, time to let planemo handle the rest!
-&& python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL2 -r $BOT_SIGNAL1 &&
+python bioblend-scripts/tag_history.py $SOURCE_HISTORY_ID --dataset-id $ENA_LINKS -g "$GALAXY_SERVER" -a $API_KEY -t $BOT_SIGNAL2 -r $BOT_SIGNAL1 &&
 # bot-downloading tag has been removed from links dataset, no need to handle this on errors anymore
 trap - err &&
 # run the WF
