@@ -238,7 +238,13 @@ def add_batch_details(gi, discovered_batches):
         ids = COGUKSummary.get_record_history_ids(record, gi)
         # get seq platform and primer scheme info from
         # variation history ID and update batch info with it
-        record.update(get_seq_details(gi, ids[0]))
+        try:
+            record.update(get_seq_details(gi, ids[0]))
+        except Exception:
+            print('Encountered issue retrieving batch details with')
+            print(record)
+            print(ids)
+            raise
         # now get generating WF version from each type of history
         # and update the corresponding info with it
         for t, hid in zip(['variation', 'report', 'consensus'], ids):
