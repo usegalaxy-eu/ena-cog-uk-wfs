@@ -106,10 +106,8 @@ def get_seq_details(gi, history_id):
     bwa_mem_jobs = gi.jobs.get_jobs(
         state='ok',
         history_id=history_id,
-        tool_id=[
-            'toolshed.g2.bx.psu.edu/repos/devteam/bwa/bwa_mem/0.7.17.1',
-            'toolshed.g2.bx.psu.edu/repos/devteam/bwa/bwa_mem/0.7.17.2'
-        ],
+        tool_id='toolshed.g2.bx.psu.edu/repos/devteam/bwa/bwa_mem/0.7.17.1,'
+                'toolshed.g2.bx.psu.edu/repos/devteam/bwa/bwa_mem/0.7.17.2',
         limit=1
     )
     minimap_jobs = gi.jobs.get_jobs(
@@ -126,11 +124,9 @@ def get_seq_details(gi, history_id):
     ivar_trim_jobs = gi.jobs.get_jobs(
         state='ok',
         history_id=history_id,
-        tool_id=[
-            'toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.3.1+galaxy2',
-            'toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.3.1+galaxy0',
-            'toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.2.2+galaxy1'
-        ],
+        tool_id='toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.3.1+galaxy2,'
+                'toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.3.1+galaxy0,'
+                'toolshed.g2.bx.psu.edu/repos/iuc/ivar_trim/ivar_trim/1.2.2+galaxy1',
         limit=1
     )
     primer_scheme = gi.datasets.show_dataset(
