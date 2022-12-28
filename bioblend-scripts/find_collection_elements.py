@@ -97,24 +97,25 @@ if __name__ == '__main__':
         key=args.api_key
     )
 
-    history_ids = find_histories_by_tags(
-        args.history_tags,
-        # ugly hack, which only checks the first 100 histories,
-        # but doesn't need a bigger rewrite for now :(
-        next(get_histories_chunk(gi))
+    histories_matcher = (
+        find_histories_by_tags(
+            args.history_tags,
+            histories_chunk
+        ) for histories_chunk in get_histories_chunk(gi)
     )
     dataset_types = ['dataset_collection']
     collections_matcher = (
         collection
-        for history_collections in get_matching_datasets_from_histories(
-            gi,
-            history_ids,
-            args.collection_names,
-            visible=True,
-            types=['dataset_collection'],
-            strict=args.strict
-        )
-        for collection in history_collections
+        for history_ids in histories_matcher
+            for history_collections in get_matching_datasets_from_histories(
+                gi,
+                history_ids,
+                args.collection_names,
+                visible=True,
+                types=['dataset_collection'],
+                strict=args.strict
+            )
+                for collection in history_collections
     )
     sliced_collections = get_matching_slices_from_collections(
         gi,
