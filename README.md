@@ -1,7 +1,7 @@
 # Bots for SARS-CoV-2 genome surveillance
 
 If you have to analyze a huge number of SARS-CoV-2 sequences on a regular
-basis, you will probably want to automate the excution of the analysis.
+basis, you will probably want to automate the execution of the analysis.
 
 In particular, you may be looking for:
 

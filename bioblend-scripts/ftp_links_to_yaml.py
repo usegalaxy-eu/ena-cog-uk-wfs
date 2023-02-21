@@ -9,11 +9,14 @@ import yaml
 
 from collections import Counter
 
-from bioblend import galaxy
+from bioblend import galaxy, ConnectionError
 
 
 NON_OK_TERMINAL_STATES = {
-    'empty', 'error', 'discarded', 'failed_metadata', 'paused'
+    # dataset states that will not change on the Galaxy side
+    # the empty string represents a dataset for which we haven't requested
+    # an upload yet from Galaxy
+    '', 'error', 'discarded', 'failed_metadata', 'paused'
 }
 
 
@@ -23,7 +26,7 @@ def upload_from_links(links, gi, history_id, upload_attempts, timeout):
     links_states = {}
     for link in links:
         links_states[link] = {
-            'status': 'empty',
+            'status': '',
             'attempts_left': upload_attempts
         }
 
@@ -31,22 +34,28 @@ def upload_from_links(links, gi, history_id, upload_attempts, timeout):
         for link in links:
             if links_states[link]['status'] in NON_OK_TERMINAL_STATES:
                 if links_states[link]['attempts_left'] > 0:
-                    if link[:8] == 'gxftp://':
-                        # retrieve this dataset from user's FTP dir
-                        r = gi.tools.upload_from_ftp(
-                            path=link[8:],
-                            history_id=history_id,
-                            file_type='fastqsanger.gz',
-                        )
-                    else:
-                        r = gi.tools.put_url(
-                            content=link,
-                            history_id=history_id,
-                            file_type='fastqsanger.gz',
-                        )
+                    try:
+                        if link[:8] == 'gxftp://':
+                            # retrieve this dataset from user's FTP dir
+                            r = gi.tools.upload_from_ftp(
+                                path=link[8:],
+                                history_id=history_id,
+                                file_type='fastqsanger.gz',
+                            )
+                        else:
+                            r = gi.tools.put_url(
+                                content=link,
+                                history_id=history_id,
+                                file_type='fastqsanger.gz',
+                            )
+                    except ConnectionError:
+                        # It's ok to just ignore this. The upload will be
+                        # reattempted on the next round.
+                        continue
                     links_dataset_ids[link] = r['outputs'][0]['id']
                     links_states[link]['job_id'] = r['jobs'][0]['id']
                     links_states[link]['attempts_left'] -= 1
+                    links_states[link]['status'] = 'new'
                 else:
                     raise ConnectionError(
                         'Some datasets did not upload successfully after the '
@@ -58,28 +67,36 @@ def upload_from_links(links, gi, history_id, upload_attempts, timeout):
         # update states of pending datasets and check if all complete
         all_ok = True
         for link in links:
-            if links_states[link]['status'] != 'ok':
+            if links_states[link]['status'] == 'ok':
+                continue
+            if links_states[link]['status'] in NON_OK_TERMINAL_STATES:
+                all_ok = False
+                continue
+            try:
                 links_states[link]['status'] = gi.datasets.show_dataset(
                     links_dataset_ids[link]
                 )['state']
-                if links_states[link]['status'] != 'ok':
-                    all_ok = False
-                    if links_states[link]['status'] == 'running':
-                        if 'running_since' not in links_states[link]:
-                            links_states[link]['running_since'] = int(
-                                time.time()
-                            )
-                        elif (
-                            int(time.time())
-                            - links_states[link]['running_since']
-                        ) >= timeout_secs:
-                            # upload of this dataset took longer than the
-                            # specified timeout
-                            # => cancel the upload job and flag the link as
-                            # requiring a new upload attempt
-                            gi.jobs.cancel_job(links_states[link]['job_id'])
-                            links_states[link]['status'] = 'empty'
-                            links_states[link].pop('running_since')
+            except ConnectionError:
+                # treat connection errors like a still not ok state
+                pass
+            if links_states[link]['status'] != 'ok':
+                all_ok = False
+                if links_states[link]['status'] == 'running':
+                    if 'running_since' not in links_states[link]:
+                        links_states[link]['running_since'] = int(
+                            time.time()
+                        )
+                    elif (
+                        int(time.time())
+                        - links_states[link]['running_since']
+                    ) >= timeout_secs:
+                        # upload of this dataset took longer than the
+                        # specified timeout
+                        # => cancel the upload job and flag the link as
+                        # requiring a new upload attempt
+                        gi.jobs.cancel_job(links_states[link]['job_id'])
+                        links_states[link]['status'] = ''
+                        links_states[link].pop('running_since')
         if all_ok:
             return links_dataset_ids
 
