@@ -99,15 +99,31 @@ python compress_for_dashboard.py --use-existing last_sa_variants.json variants.t
 rm -R PRJNA636748_reports &&
 rm last_sa_variants.json &&
 
+# ************** Portuguese data extraction ******************
+# +++ get previous results +++
+printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from Portugal and appending it to existing data ... " &&
+# curl -o last_pt_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB47340.json.gz &&
+# gzip -d last_pt_variants.json.gz &&
+# download PRJEB47340 by-sample reports from .eu and .org
+mkdir PRJEB47340_reports &&
+python bioblend-scripts/summarize.py -g "https://usegalaxy.eu" -a $API_KEY -u new_combined.json --check-data-availability --data-download-dir PRJEB47340_reports/ --study-accession PRJEB47340 -o new_PRJEB47340.json &&
+# aggregate variants table and poisson stats of new_data for observable
+python fix_reports.py PRJEB47340_reports/ &&
+python aggregator.py PRJEB47340_reports/ --add-batch-id -c Sample POS FILTER=PASS REF ALT DP AF AFcaller SB DP4 EFFECT GENE CODON AA TRID > variants_full_PRJEB47340.tsv &&
+python aggregator.py PRJEB47340_reports/ -d poisson_PRJEB47340.tsv -c Sample POS FILTER=PASS REF ALT AF EFFECT CODON TRID AA > variants.tsv &&
+python compress_for_dashboard.py variants.tsv variants_PRJEB47340.json &&
+rm -R PRJEB47340_reports &&
+# rm last_pt_variants.json &&
+
 # ************ combine files and create custom observable files ************
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Cobining data and creating observable files ... " &&
 # combine per-project json files, then merge with pre-existing json adding in possibly missing metadata for any record
-python bioblend-scripts/summarize.py -u new_PRJEB37886.json new_PRJEB44141.json new_PRJEB40277.json new_Estonia.json new_PRJNA636748.json -o new_combined.json &&
+python bioblend-scripts/summarize.py -u new_PRJEB37886.json new_PRJEB44141.json new_PRJEB40277.json new_Estonia.json new_PRJNA636748.json new_PRJEB47340.json -o new_combined.json &&
 python bioblend-scripts/summarize.py -u last_processed.json new_combined.json --retrieve-meta -o updated.json &&
 # combine poisson stats from all projects
-cat poisson_PRJEB37886.tsv poisson_PRJEB44141.tsv poisson_PRJEB40277.tsv poisson_Estonia.tsv poisson_PRJNA636748.tsv > poisson.tsv &&
+cat poisson_PRJEB37886.tsv poisson_PRJEB44141.tsv poisson_PRJEB40277.tsv poisson_Estonia.tsv poisson_PRJNA636748.tsv poisson_PRJEB47340.tsv > poisson.tsv &&
 # combine full variant reports from all projects and compress them
-cat variants_full_PRJEB37886.tsv variants_full_PRJEB44141.tsv variants_full_PRJEB40277.tsv variants_full_Estonia.tsv variants_full_PRJNA636748.tsv | gzip > variants_full.tsv.gz &&
+cat variants_full_PRJEB37886.tsv variants_full_PRJEB44141.tsv variants_full_PRJEB40277.tsv variants_full_Estonia.tsv variants_full_PRJNA636748.tsv variants_full_PRJEB47340.tsv | gzip > variants_full.tsv.gz &&
 # generate per-project sample metadata and half-year time interval variant files for observable
 # for recompressing in time intervals we need an "empty" tabular variants file
 # simply to satisfy the command line parser
@@ -119,6 +135,7 @@ python compress_for_dashboard.py -s 2020-09-01 -e 2021-02-29 -m meta_PRJEB37886.
 python compress_for_dashboard.py -s 2021-03-01 -e 2021-08-31 -m meta_PRJEB37886.tsv --use-existing variants_PRJEB37886.json dummy.tsv variants_PRJEB37886_21.json &&
 python compress_for_dashboard.py -s 2021-09-01 -e 2022-02-29 -m meta_PRJEB37886.tsv --use-existing variants_PRJEB37886.json dummy.tsv variants_PRJEB37886_21-22.json &&
 python compress_for_dashboard.py -s 2022-03-01 -e 2022-08-31 -m meta_PRJEB37886.tsv --use-existing variants_PRJEB37886.json dummy.tsv variants_PRJEB37886_22.json &&
+python compress_for_dashboard.py -s 2022-09-01 -e 2023-02-29 -m meta_PRJEB37886.tsv --use-existing variants_PRJEB37886.json dummy.tsv variants_PRJEB37886_22-23.json &&
 gzip meta_PRJEB37886.tsv &&
 for file in variants_PRJEB37886*.json; do gzip $file; done &&
 # Greece
@@ -128,6 +145,7 @@ python compress_for_dashboard.py -s 2020-09-01 -e 2021-02-29 -m meta_PRJEB44141.
 python compress_for_dashboard.py -s 2021-03-01 -e 2021-08-31 -m meta_PRJEB44141.tsv --use-existing variants_PRJEB44141.json dummy.tsv variants_PRJEB44141_21.json &&
 python compress_for_dashboard.py -s 2021-09-01 -e 2022-02-29 -m meta_PRJEB44141.tsv --use-existing variants_PRJEB44141.json dummy.tsv variants_PRJEB44141_21-22.json &&
 python compress_for_dashboard.py -s 2022-03-01 -e 2022-08-31 -m meta_PRJEB44141.tsv --use-existing variants_PRJEB44141.json dummy.tsv variants_PRJEB44141_22.json &&
+python compress_for_dashboard.py -s 2022-09-01 -e 2023-02-29 -m meta_PRJEB44141.tsv --use-existing variants_PRJEB44141.json dummy.tsv variants_PRJEB44141_22-23.json &&
 gzip meta_PRJEB44141.tsv &&
 for file in variants_PRJEB44141*.json; do gzip $file; done &&
 # Ireland
@@ -137,6 +155,7 @@ python compress_for_dashboard.py -s 2020-09-01 -e 2021-02-29 -m meta_PRJEB40277.
 python compress_for_dashboard.py -s 2021-03-01 -e 2021-08-31 -m meta_PRJEB40277.tsv --use-existing variants_PRJEB40277.json dummy.tsv variants_PRJEB40277_21.json &&
 python compress_for_dashboard.py -s 2021-09-01 -e 2022-02-29 -m meta_PRJEB40277.tsv --use-existing variants_PRJEB40277.json dummy.tsv variants_PRJEB40277_21-22.json &&
 python compress_for_dashboard.py -s 2022-03-01 -e 2022-08-31 -m meta_PRJEB40277.tsv --use-existing variants_PRJEB40277.json dummy.tsv variants_PRJEB40277_22.json &&
+python compress_for_dashboard.py -s 2022-09-01 -e 2023-02-29 -m meta_PRJEB40277.tsv --use-existing variants_PRJEB40277.json dummy.tsv variants_PRJEB40277_22-23.json &&
 gzip meta_PRJEB40277.tsv &&
 for file in variants_PRJEB40277*.json; do gzip $file; done &&
 # Estonia
@@ -146,6 +165,7 @@ python compress_for_dashboard.py -s 2020-09-01 -e 2021-02-29 -m meta_Estonia.tsv
 python compress_for_dashboard.py -s 2021-03-01 -e 2021-08-31 -m meta_Estonia.tsv --use-existing variants_Estonia.json dummy.tsv variants_Estonia_21.json &&
 python compress_for_dashboard.py -s 2021-09-01 -e 2022-02-29 -m meta_Estonia.tsv --use-existing variants_Estonia.json dummy.tsv variants_Estonia_21-22.json &&
 python compress_for_dashboard.py -s 2022-03-01 -e 2022-08-31 -m meta_Estonia.tsv --use-existing variants_Estonia.json dummy.tsv variants_Estonia_22.json &&
+python compress_for_dashboard.py -s 2022-09-01 -e 2023-02-29 -m meta_Estonia.tsv --use-existing variants_Estonia.json dummy.tsv variants_Estonia_22-23.json &&
 gzip meta_Estonia.tsv &&
 for file in variants_Estonia*.json; do gzip $file; done &&
 # South Africa
@@ -155,9 +175,19 @@ python compress_for_dashboard.py -s 2020-09-01 -e 2021-02-29 -m meta_PRJNA636748
 python compress_for_dashboard.py -s 2021-03-01 -e 2021-08-31 -m meta_PRJNA636748.tsv --use-existing variants_PRJNA636748.json dummy.tsv variants_PRJNA636748_21.json &&
 python compress_for_dashboard.py -s 2021-09-01 -e 2022-02-29 -m meta_PRJNA636748.tsv --use-existing variants_PRJNA636748.json dummy.tsv variants_PRJNA636748_21-22.json &&
 python compress_for_dashboard.py -s 2022-03-01 -e 2022-08-31 -m meta_PRJNA636748.tsv --use-existing variants_PRJNA636748.json dummy.tsv variants_PRJNA636748_22.json &&
+python compress_for_dashboard.py -s 2022-09-01 -e 2023-02-29 -m meta_PRJNA636748.tsv --use-existing variants_PRJNA636748.json dummy.tsv variants_PRJNA636748_22-23.json &&
 gzip meta_PRJNA636748.tsv &&
 for file in variants_PRJNA636748*.json; do gzip $file; done &&
-
+# Portugal
+python bioblend-scripts/summarize.py -u updated.json --study-accession PRJEB47340 --format-tabular -o updated_meta.tsv && python deduplicate_observable_meta.py updated_meta.tsv > meta_PRJEB47340.tsv &&
+python compress_for_dashboard.py -s 2020-03-01 -e 2020-08-31 -m meta_PRJEB47340.tsv --use-existing variants_PRJEB47340.json dummy.tsv variants_PRJEB47340_20.json &&
+python compress_for_dashboard.py -s 2020-09-01 -e 2021-02-29 -m meta_PRJEB47340.tsv --use-existing variants_PRJEB47340.json dummy.tsv variants_PRJEB47340_20-21.json &&
+python compress_for_dashboard.py -s 2021-03-01 -e 2021-08-31 -m meta_PRJEB47340.tsv --use-existing variants_PRJEB47340.json dummy.tsv variants_PRJEB47340_21.json &&
+python compress_for_dashboard.py -s 2021-09-01 -e 2022-02-29 -m meta_PRJEB47340.tsv --use-existing variants_PRJEB47340.json dummy.tsv variants_PRJEB47340_21-22.json &&
+python compress_for_dashboard.py -s 2022-03-01 -e 2022-08-31 -m meta_PRJEB47340.tsv --use-existing variants_PRJEB47340.json dummy.tsv variants_PRJEB47340_22.json &&
+python compress_for_dashboard.py -s 2022-09-01 -e 2023-02-29 -m meta_PRJEB47340.tsv --use-existing variants_PRJEB47340.json dummy.tsv variants_PRJEB47340_22-23.json &&
+gzip meta_PRJEB47340.tsv &&
+for file in variants_PRJEB47340*.json; do gzip $file; done &&
 
 # ************* FTP uploads **************
 # push updated versions of all files to the FTP server
@@ -175,6 +205,7 @@ curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB37886_20-21.json.gz ftp://x
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB37886_21.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB37886_21.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB37886_21-22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB37886_21-22.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB37886_22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB37886_22.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB37886_22-23.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB37886_22-23.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T meta_PRJEB37886.tsv.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB37886_meta.tsv.gz &&
 # compressed Greek data and metadata for observable dashboard
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB44141.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB44141.json.gz &&
@@ -183,6 +214,7 @@ curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB44141_20-21.json.gz ftp://x
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB44141_21.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB44141_21.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB44141_21-22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB44141_21-22.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB44141_22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB44141_22.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB44141_22-23.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB44141_22-23.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T meta_PRJEB44141.tsv.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB44141_meta.tsv.gz &&
 # compressed Irish data and metadata for observable dashboard
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB40277.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB40277.json.gz &&
@@ -191,6 +223,7 @@ curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB40277_20-21.json.gz ftp://x
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB40277_21.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB40277_21.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB40277_21-22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB40277_21-22.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB40277_22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB40277_22.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB40277_22-23.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB40277_22-23.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T meta_PRJEB40277.tsv.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB40277_meta.tsv.gz &&
 # compressed Estonian data and metadata for observable dashboard
 curl --user $USER_ID:$USER_PASSWORD -T variants_Estonia.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_Estonia.json.gz &&
@@ -199,6 +232,7 @@ curl --user $USER_ID:$USER_PASSWORD -T variants_Estonia_20-21.json.gz ftp://xfer
 curl --user $USER_ID:$USER_PASSWORD -T variants_Estonia_21.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_Estonia_21.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_Estonia_21-22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_Estonia_21-22.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_Estonia_22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_Estonia_22.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_Estonia_22-23.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_Estonia_22-23.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T meta_Estonia.tsv.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_Estonia_meta.tsv.gz &&
 # compressed South African data and metadata for observable dashboard
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJNA636748.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJNA636748.json.gz &&
@@ -207,7 +241,17 @@ curl --user $USER_ID:$USER_PASSWORD -T variants_PRJNA636748_20-21.json.gz ftp://
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJNA636748_21.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJNA636748_21.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJNA636748_21-22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJNA636748_21-22.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T variants_PRJNA636748_22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJNA636748_22.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJNA636748_22-23.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJNA636748_22-23.json.gz &&
 curl --user $USER_ID:$USER_PASSWORD -T meta_PRJNA636748.tsv.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJNA636748_meta.tsv.gz &&
+# compressed Portuguese data and metadata for observable dashboard
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB47340.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB47340.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB47340_20.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB47340_20.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB47340_20-21.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB47340_20-21.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB47340_21.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB47340_21.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB47340_21-22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB47340_21-22.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB47340_22.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB47340_22.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T variants_PRJEB47340_22-23.json.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB47340_22-23.json.gz &&
+curl --user $USER_ID:$USER_PASSWORD -T meta_PRJEB47340.tsv.gz ftp://xfer.crg.eu/userspace/results/observable_data/gx-observable_data_PRJEB47340_meta.tsv.gz &&
 
 # ************ Publishing on Galaxy servers *************
 # make the new histories from .eu accessible if they aren't yet; will add a "bot-published" tag to them
