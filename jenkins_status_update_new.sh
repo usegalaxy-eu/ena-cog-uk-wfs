@@ -5,7 +5,7 @@ sed "s/cog-uk_report/gx_report/" bioblend-scripts/summarize.py > bioblend-script
 mv bioblend-scripts/summarize.patched bioblend-scripts/summarize.py &&
 
 # get the current JSON and the compressed variants file from the FTP server
-curl -o last_processed.json ftp://xfer13.crg.eu/gx-surveillance.json &&
+curl --user $GUEST:$GUESTPWD -o last_processed.json ftp://xfer13.crg.eu/gx-surveillance.json &&
 
 # generate json with info about new histories discovered on usegalaxy.eu
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Discovering new variation/report/consensus history triplets on usegalaxy.eu ..." &&
@@ -19,7 +19,7 @@ python bioblend-scripts/summarize.py -g "https://usegalaxy.eu" -a $API_KEY -u ne
 # ************** COG-UK data extraction ******************
 # +++ get previous results +++
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data for COG-UK and appending it to existing data ... " &&
-curl -o last_cog_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB37886.json.gz &&
+curl --user $GUEST:$GUESTPWD -o last_cog_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB37886.json.gz &&
 gzip -d last_cog_variants.json.gz &&
 # download COG-UK by-sample reports from .eu and .org
 mkdir PRJEB37886_reports &&
@@ -36,7 +36,7 @@ rm last_cog_variants.json &&
 # ************** Greek data extraction ******************
 # +++ get previous results +++
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from Greece and appending it to existing data ... " &&
-curl -o last_greek_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB44141.json.gz &&
+curl --user $GUEST:$GUESTPWD -o last_greek_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB44141.json.gz &&
 gzip -d last_greek_variants.json.gz &&
 # download PRJEB44141 by-sample reports from .eu and .org
 mkdir PRJEB44141_reports &&
@@ -52,7 +52,7 @@ rm last_greek_variants.json &&
 # ************** Irish data extraction ******************
 # +++ get previous results +++
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from Ireland and appending it to existing data ... " &&
-curl -o last_irish_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB40277.json.gz &&
+curl --user $GUEST:$GUESTPWD -o last_irish_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB40277.json.gz &&
 gzip -d last_irish_variants.json.gz &&
 # download PRJEB40277 by-sample reports from .eu and .org
 mkdir PRJEB40277_reports &&
@@ -68,7 +68,7 @@ rm last_irish_variants.json &&
 # ************** Estonian data extraction ******************
 # +++ get previous results +++
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from Estonia and appending it to existing data ... " &&
-curl -o last_ee_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_Estonia.json.gz &&
+curl --user $GUEST:$GUESTPWD -o last_ee_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_Estonia.json.gz &&
 gzip -d last_ee_variants.json.gz &&
 # get Estonian study accessions from the ENA
 EE_ACCS=$(curl -X POST -d 'result=study&query=study_title="Whole genome sequencing of SARS-CoV-2 * Estonia"&format=tsv&fields=study_accession' "https://www.ebi.ac.uk/ena/portal/api/search" | tail -n +2 | tr "\n" " ") &&
@@ -86,7 +86,7 @@ rm last_ee_variants.json &&
 # ************** South African data extraction ******************
 # +++ get previous results +++
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from South Africa and appending it to existing data ... " &&
-curl -o last_sa_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJNA636748.json.gz &&
+curl --user $GUEST:$GUESTPWD -o last_sa_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJNA636748.json.gz &&
 gzip -d last_sa_variants.json.gz &&
 # download PRJNA636748 by-sample reports from .eu and .org
 mkdir PRJNA636748_reports &&
@@ -102,7 +102,7 @@ rm last_sa_variants.json &&
 # ************** Portuguese data extraction ******************
 # +++ get previous results +++
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Retrieving new variant report data from Portugal and appending it to existing data ... " &&
-# curl -o last_pt_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB47340.json.gz &&
+# curl --user $GUEST:$GUESTPWD -o last_pt_variants.json.gz ftp://xfer13.crg.eu/observable_data/gx-observable_data_PRJEB47340.json.gz &&
 # gzip -d last_pt_variants.json.gz &&
 # download PRJEB47340 by-sample reports from .eu and .org
 mkdir PRJEB47340_reports &&
@@ -267,4 +267,4 @@ python bioblend-scripts/summarize.py -g "https://usegalaxy.eu" -a $API_KEY -u ne
 # ************ Done !! *************
 # list public contents to confirm
 printf "%(${TIMESTAMP_FORMAT})T %s\n" '-1' "Success! Listing Contents on FTP server ..." &&
-curl ftp://xfer13.crg.eu
+curl --user $GUEST:$GUESTPWD ftp://xfer13.crg.eu
