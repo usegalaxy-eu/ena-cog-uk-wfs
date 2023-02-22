@@ -1,5 +1,6 @@
 #use_server: https://usegalaxy.eu
-#use_workflow_id: 37b04b02ec08e84f
+## v0.3 of reporting WF
+#use_workflow_id: 9eb29cc96d8d75c2
 #new_history_name_suffix: Reporting
 #new_history_tag: gx_report
 #vcf_input_name: Final \(SnpEff-\) annotated variants
