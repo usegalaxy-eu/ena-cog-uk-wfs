@@ -20,86 +20,106 @@ NON_OK_TERMINAL_STATES = {
 }
 
 
-def upload_from_links(links, gi, history_id, upload_attempts, timeout):
-    timeout_secs = timeout * 60
-    links_dataset_ids = {}
-    links_states = {}
-    for link in links:
-        links_states[link] = {
-            'status': '',
-            'attempts_left': upload_attempts
-        }
-
-    while True:
+class UploadManager():
+    def __init__(self, links, gi, history_id, upload_attempts, timeout):
+        self.gi = gi
+        self.history_id = history_id
+        self.timeout_secs = timeout * 60
+        self.links_dataset_ids = {}
+        self.links_states = {}
         for link in links:
-            if links_states[link]['status'] in NON_OK_TERMINAL_STATES:
-                if links_states[link]['attempts_left'] > 0:
-                    try:
-                        if link[:8] == 'gxftp://':
-                            # retrieve this dataset from user's FTP dir
-                            r = gi.tools.upload_from_ftp(
-                                path=link[8:],
-                                history_id=history_id,
-                                file_type='fastqsanger.gz',
-                            )
-                        else:
-                            r = gi.tools.put_url(
-                                content=link,
-                                history_id=history_id,
-                                file_type='fastqsanger.gz',
-                            )
-                    except ConnectionError:
-                        # It's ok to just ignore this. The upload will be
-                        # reattempted on the next round.
-                        continue
-                    links_dataset_ids[link] = r['outputs'][0]['id']
-                    links_states[link]['job_id'] = r['jobs'][0]['id']
-                    links_states[link]['attempts_left'] -= 1
-                    links_states[link]['status'] = 'new'
-                else:
-                    raise ConnectionError(
-                        'Some datasets did not upload successfully after the '
-                        'specified number of upload attempts'
-                    )
+            self.links_states[link] = {
+                'status': '',
+                'attempts_left': upload_attempts
+            }
+        # minimal delay between checking the status of the same dataset twice
+        self.check_interval = 10
 
-        time.sleep(60)
+    def _upload_from_link(self, link):
+        if link[:8] == 'gxftp://':
+            # retrieve this dataset from user's FTP dir
+            r = self.gi.tools.upload_from_ftp(
+                path=link[8:],
+                history_id=self.history_id,
+                file_type='fastqsanger.gz',
+            )
+        else:
+            r = self.gi.tools.put_url(
+                content=link,
+                history_id=self.history_id,
+                file_type='fastqsanger.gz',
+            )
 
-        # update states of pending datasets and check if all complete
-        all_ok = True
-        for link in links:
-            if links_states[link]['status'] == 'ok':
-                continue
-            if links_states[link]['status'] in NON_OK_TERMINAL_STATES:
-                all_ok = False
-                continue
-            try:
-                links_states[link]['status'] = gi.datasets.show_dataset(
-                    links_dataset_ids[link]
-                )['state']
-            except ConnectionError:
-                # treat connection errors like a still not ok state
-                pass
-            if links_states[link]['status'] != 'ok':
-                all_ok = False
-                if links_states[link]['status'] == 'running':
-                    if 'running_since' not in links_states[link]:
-                        links_states[link]['running_since'] = int(
-                            time.time()
+        return r
+
+    def upload_from_links(self):
+        while True:
+            # update states of pending datasets and check if all complete
+            unfinished = 0
+            uploaded_one = False
+            for link, state in self.links_states.items():
+                if state['status'] in NON_OK_TERMINAL_STATES:
+                    if state['attempts_left'] <= 0:
+                        raise ConnectionError(
+                            'Some datasets did not upload successfully '
+                            'after the specified number of upload attempts'
                         )
-                    elif (
+                    unfinished += 1
+                    if not uploaded_one:
+                        try:
+                            r = self._upload_from_link(link)
+                        except ConnectionError:
+                            # It's ok to just ignore this. The upload will be
+                            # reattempted on the next round.
+                            continue
+                        self.links_dataset_ids[link] = r['outputs'][0]['id']
+                        state['job_id'] = r['jobs'][0]['id']
+                        state['attempts_left'] -= 1
+                        state['status'] = 'new'
+                        uploaded_one = True
+                    continue
+                if state['status'] != 'ok':
+                    if (
+                        'last_checked' not in state
+                    ) or (
                         int(time.time())
-                        - links_states[link]['running_since']
-                    ) >= timeout_secs:
-                        # upload of this dataset took longer than the
-                        # specified timeout
-                        # => cancel the upload job and flag the link as
-                        # requiring a new upload attempt
-                        gi.jobs.cancel_job(links_states[link]['job_id'])
-                        links_states[link]['status'] = ''
-                        links_states[link].pop('running_since')
-        if all_ok:
-            return links_dataset_ids
+                        - state['last_checked']
+                    ) >= self.check_interval:
+                        try:
+                            state['status'] = gi.datasets.show_dataset(
+                                self.links_dataset_ids[link]
+                            )['state']
+                        except ConnectionError:
+                            # treat connection errors like a still not ok state
+                            pass
+                        state['last_checked'] = int(time.time())
+                    else:
+                        # moving too fast, lets pause a little
+                        time.sleep(self.check_interval / 2)
+                if state['status'] != 'ok':
+                    unfinished += 1
+                    if state['status'] == 'running':
+                        if 'running_since' not in state:
+                            state['running_since'] = int(time.time())
+                        elif (
+                            int(time.time())
+                            - state['running_since']
+                        ) >= self.timeout_secs:
+                            # upload of this dataset took longer than the
+                            # specified timeout
+                            # => cancel the upload job and flag the link as
+                            # requiring a new upload attempt
+                            self.gi.jobs.cancel_job(state['job_id'])
+                            state['status'] = ''
+                            state.pop('running_since')
+            if not unfinished:
+                return
+            else:
+                yield unfinished
 
+    def upload_all(self):
+        for unfinished in self.upload_from_links():
+            pass
 
 class LinkCollection():
     pe_indicator_mapping = {
@@ -372,14 +392,14 @@ if __name__ == '__main__':
     ).decode("utf-8").splitlines()[1:]
 
     links = LinkCollection(data_specs, default_protocol=args.protocol)
+    uploads = UploadManager(
+        links, gi, args.history_id, args.upload_attempts, args.upload_timeout
+    )
 
     yaml = records_to_yaml(
         parse_fastq_links(
             links,
-            upload_from_links(
-                links, gi, args.history_id,
-                args.upload_attempts, args.upload_timeout
-            )
+            uploads.upload_all()
         ),
         args.collection_name
     )
