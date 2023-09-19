@@ -9,6 +9,21 @@ from find_by_tags import (
 from find_datasets import get_matching_datasets_from_histories
 
 
+def get_histories_chunk(gi, chunk_size=100):
+    request_template = '{0}/api/histories?limit={1}&offset={{0}}'.format(
+        gi.base_url, chunk_size
+    )
+    offset=0
+    while True:
+        resp = gi.make_get_request(
+            request_template.format(offset)
+        ).json()
+        if not resp:
+            break
+        yield resp
+        offset += chunk_size
+
+
 def get_matching_slices_from_collections(gi, tags, collections, max_matching):
     yield_count = 0
     for collection in collections:
@@ -82,22 +97,25 @@ if __name__ == '__main__':
         key=args.api_key
     )
 
-    history_ids = find_histories_by_tags(
-        args.history_tags,
-        gi.histories.get_histories()
+    histories_matcher = (
+        find_histories_by_tags(
+            args.history_tags,
+            histories_chunk
+        ) for histories_chunk in get_histories_chunk(gi)
     )
     dataset_types = ['dataset_collection']
     collections_matcher = (
         collection
-        for history_collections in get_matching_datasets_from_histories(
-            gi,
-            history_ids,
-            args.collection_names,
-            visible=True,
-            types=['dataset_collection'],
-            strict=args.strict
-        )
-        for collection in history_collections
+        for history_ids in histories_matcher
+            for history_collections in get_matching_datasets_from_histories(
+                gi,
+                history_ids,
+                args.collection_names,
+                visible=True,
+                types=['dataset_collection'],
+                strict=args.strict
+            )
+                for collection in history_collections
     )
     sliced_collections = get_matching_slices_from_collections(
         gi,
