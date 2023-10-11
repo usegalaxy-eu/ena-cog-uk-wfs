@@ -8,7 +8,13 @@ JOB_YML='variation-job.yml'
 
 # read bot config
 JOB_YML_DIR='job-yml-templates'
-GALAXY_SERVER=$(grep '#use_server:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
+
+if [ -z "${GALAXY_SERVER}" ];
+then
+    GALAXY_SERVER=$(grep '#use_server:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
+fi
+
+
 DEST_NAME_BASE=$(grep '#new_history_base_name:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 DEST_TAG=$(grep '#new_history_tag:' "$JOB_YML_DIR/$JOB_YML" | cut -d ' ' -f 2-)
 # variation bot-only config
